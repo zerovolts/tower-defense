@@ -21,10 +21,53 @@ fn setup(
 ) {
     commands.spawn_bundle(OrthographicCameraBundle::new_2d());
 
+    // Build Slots
     commands.spawn_bundle(ColorMesh2dBundle {
-        mesh: Mesh2dHandle(meshes.add(RegPoly::new(6, 16.0).into())),
-        material: materials.add(Color::rgb(1.0, 0.5, 0.0).into()),
+        mesh: Mesh2dHandle(meshes.add(shape::Quad::new(Vec2::new(30.0, 30.0)).into())),
+        material: materials.add(Color::rgb(0.3, 0.3, 0.3).into()),
         transform: Transform::from_xyz(0.0, 0.0, 0.0),
+        ..Default::default()
+    });
+    commands.spawn_bundle(ColorMesh2dBundle {
+        mesh: Mesh2dHandle(meshes.add(shape::Quad::new(Vec2::new(30.0, 30.0)).into())),
+        material: materials.add(Color::rgb(0.3, 0.3, 0.3).into()),
+        transform: Transform::from_xyz(32.0, 0.0, 0.0),
+        ..Default::default()
+    });
+    commands.spawn_bundle(ColorMesh2dBundle {
+        mesh: Mesh2dHandle(meshes.add(shape::Quad::new(Vec2::new(30.0, 30.0)).into())),
+        material: materials.add(Color::rgb(0.3, 0.3, 0.3).into()),
+        transform: Transform::from_xyz(64.0, 0.0, 0.0),
+        ..Default::default()
+    });
+    commands.spawn_bundle(ColorMesh2dBundle {
+        mesh: Mesh2dHandle(meshes.add(shape::Quad::new(Vec2::new(30.0, 30.0)).into())),
+        material: materials.add(Color::rgb(0.3, 0.3, 0.3).into()),
+        transform: Transform::from_xyz(96.0, 0.0, 0.0),
+        ..Default::default()
+    });
+
+    // Tower
+    commands.spawn_bundle(ColorMesh2dBundle {
+        mesh: Mesh2dHandle(meshes.add(RegPoly::new(6, 12.0).into())),
+        material: materials.add(Color::rgb(0.0, 0.5, 1.0).into()),
+        transform: Transform::from_xyz(0.0, 0.0, 0.0),
+        ..Default::default()
+    });
+
+    // Enemy
+    commands.spawn_bundle(ColorMesh2dBundle {
+        mesh: Mesh2dHandle(meshes.add(RegPoly::new(4, 12.0).into())),
+        material: materials.add(Color::rgb(1.0, 0.3, 0.0).into()),
+        transform: Transform::from_xyz(32.0, 128.0, 0.0),
+        ..Default::default()
+    });
+
+    // Projectile
+    commands.spawn_bundle(ColorMesh2dBundle {
+        mesh: Mesh2dHandle(meshes.add(RegPoly::new(8, 3.0).into())),
+        material: materials.add(Color::rgb(0.1, 0.1, 0.1).into()),
+        transform: Transform::from_xyz(16.0, 64.0, 0.0),
         ..Default::default()
     });
 }
@@ -49,7 +92,6 @@ impl From<RegPoly> for Mesh {
         positions.push([0.0, 0.0, 0.0]);
         for i in 0..polygon.sides {
             let angle = (i as f32) / (polygon.sides as f32) * TAU;
-            dbg!(angle);
             positions.push([
                 angle.cos() * polygon.radius,
                 angle.sin() * polygon.radius,
