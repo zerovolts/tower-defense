@@ -68,7 +68,22 @@ fn setup(
             transform: Transform::from_xyz(0.0, 0.0, 0.0),
             ..Default::default()
         })
-        .insert(Tower::default());
+        .insert(Tower::default())
+        .with_children(|parent| {
+            parent.spawn_bundle(ColorMesh2dBundle {
+                mesh: Mesh2dHandle(meshes.add(shape::Quad::new(Vec2::new(24.0, 4.0)).into())),
+                material: materials.add(Color::rgb(0.4, 0.4, 0.4).into()),
+                transform: Transform::from_xyz(12.0, 0.0, 1.0),
+                ..Default::default()
+            });
+
+            parent.spawn_bundle(ColorMesh2dBundle {
+                mesh: Mesh2dHandle(meshes.add(shape::Quad::new(Vec2::new(8.0, 8.0)).into())),
+                material: materials.add(Color::rgb(0.4, 0.4, 0.4).into()),
+                transform: Transform::from_xyz(0.0, 0.0, 1.0),
+                ..Default::default()
+            });
+        });
     commands
         .spawn_bundle(ColorMesh2dBundle {
             mesh: Mesh2dHandle(meshes.add(RegPoly::new(6, 12.0).into())),
@@ -76,7 +91,22 @@ fn setup(
             transform: Transform::from_xyz(96.0, 0.0, 0.0),
             ..Default::default()
         })
-        .insert(Tower::default());
+        .insert(Tower::default())
+        .with_children(|parent| {
+            parent.spawn_bundle(ColorMesh2dBundle {
+                mesh: Mesh2dHandle(meshes.add(shape::Quad::new(Vec2::new(24.0, 4.0)).into())),
+                material: materials.add(Color::rgb(0.4, 0.4, 0.4).into()),
+                transform: Transform::from_xyz(12.0, 0.0, 1.0),
+                ..Default::default()
+            });
+
+            parent.spawn_bundle(ColorMesh2dBundle {
+                mesh: Mesh2dHandle(meshes.add(shape::Quad::new(Vec2::new(8.0, 8.0)).into())),
+                material: materials.add(Color::rgb(0.4, 0.4, 0.4).into()),
+                transform: Transform::from_xyz(0.0, 0.0, 1.0),
+                ..Default::default()
+            });
+        });
 
     // Enemy
     commands
@@ -104,15 +134,11 @@ fn tower_firing(
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut meshes: ResMut<Assets<Mesh>>,
     time: Res<Time>,
-    mut tower_query: Query<(&mut Tower, &Transform)>,
+    mut tower_query: Query<(&mut Tower, &mut Transform), Without<Enemy>>,
     enemy_query: Query<&Transform, With<Enemy>>,
 ) {
     let max_dist = 256.0;
-    for (mut tower, tower_transform) in tower_query.iter_mut() {
-        if !(tower.last_projectile_time + 1.0 < time.seconds_since_startup()) {
-            continue;
-        }
-
+    for (mut tower, mut tower_transform) in tower_query.iter_mut() {
         let mut closest_enemy = None;
         for enemy_transform in enemy_query.iter() {
             let dist_sq = tower_transform
@@ -138,9 +164,16 @@ fn tower_firing(
 
         if let Some(diff) = closest_enemy {
             let direction = diff.normalize_or_zero() * 200.0;
+            let angle = direction.angle_between(Vec3::X);
+            tower_transform.rotation = Quat::from_axis_angle(Vec3::Z, angle);
+
+            if !(tower.last_projectile_time + 1.0 < time.seconds_since_startup()) {
+                continue;
+            }
+
             commands
                 .spawn_bundle(ColorMesh2dBundle {
-                    mesh: Mesh2dHandle(meshes.add(RegPoly::new(8, 3.0).into())),
+                    mesh: Mesh2dHandle(meshes.add(RegPoly::new(8, 2.0).into())),
                     material: materials.add(Color::rgb(0.1, 0.1, 0.1).into()),
                     transform: tower_transform.clone(),
                     ..Default::default()
