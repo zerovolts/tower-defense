@@ -9,11 +9,18 @@ use std::f32::consts::TAU;
 fn main() {
     App::new()
         .insert_resource(ClearColor(Color::rgb(0.2, 0.2, 0.2)))
+        .init_resource::<ProjectileAssets>()
         .add_plugins(DefaultPlugins)
         .add_startup_system(setup)
         .add_system(tower_firing)
         .add_system(apply_velocity)
         .run();
+}
+
+#[derive(Default)]
+struct ProjectileAssets {
+    mesh: Mesh2dHandle,
+    material: Handle<ColorMaterial>,
 }
 
 #[derive(Component, Default)]
@@ -31,8 +38,14 @@ fn setup(
     mut commands: Commands,
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut meshes: ResMut<Assets<Mesh>>,
+    mut projectile_assets: ResMut<ProjectileAssets>,
 ) {
     commands.spawn_bundle(OrthographicCameraBundle::new_2d());
+
+    *projectile_assets = ProjectileAssets {
+        mesh: Mesh2dHandle(meshes.add(RegPoly::new(8, 2.0).into())),
+        material: materials.add(Color::rgb(0.1, 0.1, 0.1).into()),
+    };
 
     // Build Slots
     commands.spawn_bundle(ColorMesh2dBundle {
@@ -131,9 +144,8 @@ fn setup(
 
 fn tower_firing(
     mut commands: Commands,
-    mut materials: ResMut<Assets<ColorMaterial>>,
-    mut meshes: ResMut<Assets<Mesh>>,
     time: Res<Time>,
+    projectile_assets: Res<ProjectileAssets>,
     mut tower_query: Query<(&mut Tower, &mut Transform), Without<Enemy>>,
     enemy_query: Query<&Transform, With<Enemy>>,
 ) {
@@ -173,8 +185,8 @@ fn tower_firing(
 
             commands
                 .spawn_bundle(ColorMesh2dBundle {
-                    mesh: Mesh2dHandle(meshes.add(RegPoly::new(8, 2.0).into())),
-                    material: materials.add(Color::rgb(0.1, 0.1, 0.1).into()),
+                    mesh: projectile_assets.mesh.clone(),
+                    material: projectile_assets.material.clone(),
                     transform: tower_transform.clone(),
                     ..Default::default()
                 })
