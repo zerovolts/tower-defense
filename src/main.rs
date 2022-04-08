@@ -11,8 +11,21 @@ fn main() {
         .insert_resource(ClearColor(Color::rgb(0.2, 0.2, 0.2)))
         .add_plugins(DefaultPlugins)
         .add_startup_system(setup)
+        .add_system(tower_firing)
+        .add_system(apply_velocity)
         .run();
 }
+
+#[derive(Component, Default)]
+struct Tower {
+    last_projectile_time: f64,
+}
+
+#[derive(Component)]
+struct Enemy;
+
+#[derive(Component)]
+struct Projectile;
 
 fn setup(
     mut commands: Commands,
@@ -48,28 +61,105 @@ fn setup(
     });
 
     // Tower
-    commands.spawn_bundle(ColorMesh2dBundle {
-        mesh: Mesh2dHandle(meshes.add(RegPoly::new(6, 12.0).into())),
-        material: materials.add(Color::rgb(0.0, 0.5, 1.0).into()),
-        transform: Transform::from_xyz(0.0, 0.0, 0.0),
-        ..Default::default()
-    });
+    commands
+        .spawn_bundle(ColorMesh2dBundle {
+            mesh: Mesh2dHandle(meshes.add(RegPoly::new(6, 12.0).into())),
+            material: materials.add(Color::rgb(0.0, 0.5, 1.0).into()),
+            transform: Transform::from_xyz(0.0, 0.0, 0.0),
+            ..Default::default()
+        })
+        .insert(Tower::default());
+    commands
+        .spawn_bundle(ColorMesh2dBundle {
+            mesh: Mesh2dHandle(meshes.add(RegPoly::new(6, 12.0).into())),
+            material: materials.add(Color::rgb(0.0, 0.5, 1.0).into()),
+            transform: Transform::from_xyz(96.0, 0.0, 0.0),
+            ..Default::default()
+        })
+        .insert(Tower::default());
 
     // Enemy
-    commands.spawn_bundle(ColorMesh2dBundle {
-        mesh: Mesh2dHandle(meshes.add(RegPoly::new(4, 12.0).into())),
-        material: materials.add(Color::rgb(1.0, 0.3, 0.0).into()),
-        transform: Transform::from_xyz(32.0, 128.0, 0.0),
-        ..Default::default()
-    });
+    commands
+        .spawn_bundle(ColorMesh2dBundle {
+            mesh: Mesh2dHandle(meshes.add(RegPoly::new(4, 12.0).into())),
+            material: materials.add(Color::rgb(1.0, 0.3, 0.0).into()),
+            transform: Transform::from_xyz(-64.0, 96.0, 0.0),
+            ..Default::default()
+        })
+        .insert(Enemy)
+        .insert(Velocity(Vec2::new(16.0, 0.0)));
+    commands
+        .spawn_bundle(ColorMesh2dBundle {
+            mesh: Mesh2dHandle(meshes.add(RegPoly::new(4, 12.0).into())),
+            material: materials.add(Color::rgb(1.0, 0.3, 0.0).into()),
+            transform: Transform::from_xyz(96.0, 128.0, 0.0),
+            ..Default::default()
+        })
+        .insert(Enemy)
+        .insert(Velocity(Vec2::new(-16.0, 0.0)));
+}
 
-    // Projectile
-    commands.spawn_bundle(ColorMesh2dBundle {
-        mesh: Mesh2dHandle(meshes.add(RegPoly::new(8, 3.0).into())),
-        material: materials.add(Color::rgb(0.1, 0.1, 0.1).into()),
-        transform: Transform::from_xyz(16.0, 64.0, 0.0),
-        ..Default::default()
-    });
+fn tower_firing(
+    mut commands: Commands,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    time: Res<Time>,
+    mut tower_query: Query<(&mut Tower, &Transform)>,
+    enemy_query: Query<&Transform, With<Enemy>>,
+) {
+    let max_dist = 256.0;
+    for (mut tower, tower_transform) in tower_query.iter_mut() {
+        if !(tower.last_projectile_time + 1.0 < time.seconds_since_startup()) {
+            continue;
+        }
+
+        let mut closest_enemy = None;
+        for enemy_transform in enemy_query.iter() {
+            let dist_sq = tower_transform
+                .translation
+                .distance_squared(enemy_transform.translation);
+
+            if dist_sq > max_dist * max_dist {
+                continue;
+            }
+
+            match closest_enemy {
+                None => {
+                    closest_enemy = Some(enemy_transform.translation - tower_transform.translation);
+                }
+                Some(diff) => {
+                    if dist_sq < diff.length_squared() {
+                        closest_enemy =
+                            Some(enemy_transform.translation - tower_transform.translation);
+                    }
+                }
+            }
+        }
+
+        if let Some(diff) = closest_enemy {
+            let direction = diff.normalize_or_zero() * 200.0;
+            commands
+                .spawn_bundle(ColorMesh2dBundle {
+                    mesh: Mesh2dHandle(meshes.add(RegPoly::new(8, 3.0).into())),
+                    material: materials.add(Color::rgb(0.1, 0.1, 0.1).into()),
+                    transform: tower_transform.clone(),
+                    ..Default::default()
+                })
+                .insert(Projectile)
+                .insert(Velocity(Vec2::new(direction.x, direction.y)));
+
+            tower.last_projectile_time = time.seconds_since_startup();
+        }
+    }
+}
+
+#[derive(Component)]
+struct Velocity(Vec2);
+
+fn apply_velocity(time: Res<Time>, mut query: Query<(&mut Transform, &Velocity)>) {
+    for (mut transform, velocity) in query.iter_mut() {
+        transform.translation += velocity.0.extend(0.0) * time.delta_seconds();
+    }
 }
 
 #[derive(Clone, Copy)]
