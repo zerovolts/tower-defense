@@ -11,12 +11,14 @@ fn main() {
         .add_event::<EnemyDestroyed>()
         .insert_resource(ClearColor(Color::rgb(0.2, 0.2, 0.2)))
         .init_resource::<ProjectileAssets>()
+        .init_resource::<EnemyAssets>()
         .init_resource::<Path>()
         .add_plugins(DefaultPlugins)
         .add_startup_system(setup)
         .add_system(tower_firing)
         .add_system(apply_velocity)
         .add_system(follow_path)
+        .add_system(spawn_enemies)
         .add_system_to_stage(CoreStage::PostUpdate, destroy_enemy)
         .run();
 }
@@ -47,6 +49,12 @@ impl From<Coord> for Vec2 {
 
 #[derive(Default)]
 struct ProjectileAssets {
+    mesh: Mesh2dHandle,
+    material: Handle<ColorMaterial>,
+}
+
+#[derive(Default)]
+struct EnemyAssets {
     mesh: Mesh2dHandle,
     material: Handle<ColorMaterial>,
 }
@@ -116,6 +124,7 @@ fn setup(
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut projectile_assets: ResMut<ProjectileAssets>,
+    mut enemy_assets: ResMut<EnemyAssets>,
     mut path: ResMut<Path>,
 ) {
     commands.spawn_bundle(OrthographicCameraBundle::new_2d());
@@ -123,6 +132,11 @@ fn setup(
     *projectile_assets = ProjectileAssets {
         mesh: Mesh2dHandle(meshes.add(RegPoly::new(8, 2.0).into())),
         material: materials.add(Color::rgb(0.1, 0.1, 0.1).into()),
+    };
+
+    *enemy_assets = EnemyAssets {
+        mesh: Mesh2dHandle(meshes.add(RegPoly::new(4, 12.0).into())),
+        material: materials.add(Color::rgb(1.0, 0.3, 0.0).into()),
     };
 
     *path = Path::new(vec![
@@ -251,16 +265,50 @@ fn setup(
             });
         });
 
-    // Enemy
     commands
         .spawn_bundle(ColorMesh2dBundle {
-            mesh: Mesh2dHandle(meshes.add(RegPoly::new(4, 12.0).into())),
-            material: materials.add(Color::rgb(1.0, 0.3, 0.0).into()),
-            transform: Transform::from_xyz(0.0, 0.0, 0.0),
+            mesh: Mesh2dHandle(meshes.add(RegPoly::new(6, 14.0).into())),
+            material: materials.add(Color::rgb(0.4, 0.2, 0.6).into()),
+            transform: Transform::from_xyz(-192.0, -192.0, 1.0),
             ..Default::default()
         })
-        .insert(Enemy)
-        .insert(PathFollow { progress: 0.0 });
+        .insert(EnemySpawner {
+            last_spawn_time: 0.0,
+        });
+}
+
+#[derive(Component)]
+struct EnemySpawner {
+    last_spawn_time: f64,
+}
+
+fn spawn_enemies(
+    mut commands: Commands,
+    assets: Res<EnemyAssets>,
+    time: Res<Time>,
+    mut query: Query<(&mut EnemySpawner, &Transform)>,
+) {
+    for (mut spawner, transform) in query.iter_mut() {
+        if time.seconds_since_startup() - spawner.last_spawn_time < 1.0 {
+            continue;
+        }
+
+        commands
+            .spawn_bundle(ColorMesh2dBundle {
+                mesh: assets.mesh.clone(),
+                material: assets.material.clone(),
+                transform: Transform::from_xyz(
+                    transform.translation.x,
+                    transform.translation.y,
+                    0.0,
+                ),
+                ..Default::default()
+            })
+            .insert(Enemy)
+            .insert(PathFollow { progress: 0.0 });
+
+        spawner.last_spawn_time = time.seconds_since_startup();
+    }
 }
 
 const CLOCKWISE: f32 = -1.0;
