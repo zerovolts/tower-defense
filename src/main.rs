@@ -4,7 +4,7 @@ use bevy::{
     sprite::Mesh2dHandle,
 };
 
-use std::f32::consts::TAU;
+use std::f32::consts::{PI, TAU};
 
 fn main() {
     App::new()
@@ -51,25 +51,25 @@ fn setup(
     commands.spawn_bundle(ColorMesh2dBundle {
         mesh: Mesh2dHandle(meshes.add(shape::Quad::new(Vec2::new(30.0, 30.0)).into())),
         material: materials.add(Color::rgb(0.3, 0.3, 0.3).into()),
-        transform: Transform::from_xyz(0.0, 0.0, 0.0),
+        transform: Transform::from_xyz(64.0, 64.0, 0.0),
         ..Default::default()
     });
     commands.spawn_bundle(ColorMesh2dBundle {
         mesh: Mesh2dHandle(meshes.add(shape::Quad::new(Vec2::new(30.0, 30.0)).into())),
         material: materials.add(Color::rgb(0.3, 0.3, 0.3).into()),
-        transform: Transform::from_xyz(32.0, 0.0, 0.0),
+        transform: Transform::from_xyz(-64.0, 64.0, 0.0),
         ..Default::default()
     });
     commands.spawn_bundle(ColorMesh2dBundle {
         mesh: Mesh2dHandle(meshes.add(shape::Quad::new(Vec2::new(30.0, 30.0)).into())),
         material: materials.add(Color::rgb(0.3, 0.3, 0.3).into()),
-        transform: Transform::from_xyz(64.0, 0.0, 0.0),
+        transform: Transform::from_xyz(-64.0, -64.0, 0.0),
         ..Default::default()
     });
     commands.spawn_bundle(ColorMesh2dBundle {
         mesh: Mesh2dHandle(meshes.add(shape::Quad::new(Vec2::new(30.0, 30.0)).into())),
         material: materials.add(Color::rgb(0.3, 0.3, 0.3).into()),
-        transform: Transform::from_xyz(96.0, 0.0, 0.0),
+        transform: Transform::from_xyz(64.0, -64.0, 0.0),
         ..Default::default()
     });
 
@@ -78,7 +78,7 @@ fn setup(
         .spawn_bundle(ColorMesh2dBundle {
             mesh: Mesh2dHandle(meshes.add(RegPoly::new(6, 12.0).into())),
             material: materials.add(Color::rgb(0.0, 0.5, 1.0).into()),
-            transform: Transform::from_xyz(0.0, 0.0, 0.0),
+            transform: Transform::from_xyz(64.0, 64.0, 0.0),
             ..Default::default()
         })
         .insert(Tower::default())
@@ -89,7 +89,6 @@ fn setup(
                 transform: Transform::from_xyz(12.0, 0.0, 1.0),
                 ..Default::default()
             });
-
             parent.spawn_bundle(ColorMesh2dBundle {
                 mesh: Mesh2dHandle(meshes.add(shape::Quad::new(Vec2::new(8.0, 8.0)).into())),
                 material: materials.add(Color::rgb(0.4, 0.4, 0.4).into()),
@@ -97,11 +96,12 @@ fn setup(
                 ..Default::default()
             });
         });
+
     commands
         .spawn_bundle(ColorMesh2dBundle {
             mesh: Mesh2dHandle(meshes.add(RegPoly::new(6, 12.0).into())),
             material: materials.add(Color::rgb(0.0, 0.5, 1.0).into()),
-            transform: Transform::from_xyz(96.0, 0.0, 0.0),
+            transform: Transform::from_xyz(-64.0, 64.0, 0.0),
             ..Default::default()
         })
         .insert(Tower::default())
@@ -112,7 +112,52 @@ fn setup(
                 transform: Transform::from_xyz(12.0, 0.0, 1.0),
                 ..Default::default()
             });
+            parent.spawn_bundle(ColorMesh2dBundle {
+                mesh: Mesh2dHandle(meshes.add(shape::Quad::new(Vec2::new(8.0, 8.0)).into())),
+                material: materials.add(Color::rgb(0.4, 0.4, 0.4).into()),
+                transform: Transform::from_xyz(0.0, 0.0, 1.0),
+                ..Default::default()
+            });
+        });
 
+    commands
+        .spawn_bundle(ColorMesh2dBundle {
+            mesh: Mesh2dHandle(meshes.add(RegPoly::new(6, 12.0).into())),
+            material: materials.add(Color::rgb(0.0, 0.5, 1.0).into()),
+            transform: Transform::from_xyz(-64.0, -64.0, 0.0),
+            ..Default::default()
+        })
+        .insert(Tower::default())
+        .with_children(|parent| {
+            parent.spawn_bundle(ColorMesh2dBundle {
+                mesh: Mesh2dHandle(meshes.add(shape::Quad::new(Vec2::new(24.0, 4.0)).into())),
+                material: materials.add(Color::rgb(0.4, 0.4, 0.4).into()),
+                transform: Transform::from_xyz(12.0, 0.0, 1.0),
+                ..Default::default()
+            });
+            parent.spawn_bundle(ColorMesh2dBundle {
+                mesh: Mesh2dHandle(meshes.add(shape::Quad::new(Vec2::new(8.0, 8.0)).into())),
+                material: materials.add(Color::rgb(0.4, 0.4, 0.4).into()),
+                transform: Transform::from_xyz(0.0, 0.0, 1.0),
+                ..Default::default()
+            });
+        });
+
+    commands
+        .spawn_bundle(ColorMesh2dBundle {
+            mesh: Mesh2dHandle(meshes.add(RegPoly::new(6, 12.0).into())),
+            material: materials.add(Color::rgb(0.0, 0.5, 1.0).into()),
+            transform: Transform::from_xyz(64.0, -64.0, 0.0),
+            ..Default::default()
+        })
+        .insert(Tower::default())
+        .with_children(|parent| {
+            parent.spawn_bundle(ColorMesh2dBundle {
+                mesh: Mesh2dHandle(meshes.add(shape::Quad::new(Vec2::new(24.0, 4.0)).into())),
+                material: materials.add(Color::rgb(0.4, 0.4, 0.4).into()),
+                transform: Transform::from_xyz(12.0, 0.0, 1.0),
+                ..Default::default()
+            });
             parent.spawn_bundle(ColorMesh2dBundle {
                 mesh: Mesh2dHandle(meshes.add(shape::Quad::new(Vec2::new(8.0, 8.0)).into())),
                 material: materials.add(Color::rgb(0.4, 0.4, 0.4).into()),
@@ -126,21 +171,16 @@ fn setup(
         .spawn_bundle(ColorMesh2dBundle {
             mesh: Mesh2dHandle(meshes.add(RegPoly::new(4, 12.0).into())),
             material: materials.add(Color::rgb(1.0, 0.3, 0.0).into()),
-            transform: Transform::from_xyz(-64.0, 96.0, 0.0),
+            transform: Transform::from_xyz(-256.0, 0.0, 0.0),
             ..Default::default()
         })
         .insert(Enemy)
-        .insert(Velocity(Vec2::new(16.0, 0.0)));
-    commands
-        .spawn_bundle(ColorMesh2dBundle {
-            mesh: Mesh2dHandle(meshes.add(RegPoly::new(4, 12.0).into())),
-            material: materials.add(Color::rgb(1.0, 0.3, 0.0).into()),
-            transform: Transform::from_xyz(96.0, 128.0, 0.0),
-            ..Default::default()
-        })
-        .insert(Enemy)
-        .insert(Velocity(Vec2::new(-16.0, 0.0)));
+        .insert(Velocity(Vec2::new(32.0, 0.0)));
 }
+
+const CLOCKWISE: f32 = -1.0;
+const COUNTER_CLOCKWISE: f32 = 1.0;
+const ANGULAR_SPEED: f32 = TAU / 200.0;
 
 fn tower_firing(
     mut commands: Commands,
@@ -151,33 +191,55 @@ fn tower_firing(
 ) {
     let max_dist = 256.0;
     for (mut tower, mut tower_transform) in tower_query.iter_mut() {
-        let mut closest_enemy = None;
+        let mut closest_enemy_direction: Option<Vec2> = None;
         for enemy_transform in enemy_query.iter() {
             let dist_sq = tower_transform
                 .translation
                 .distance_squared(enemy_transform.translation);
 
+            // Skip enemy if it's out of range.
             if dist_sq > max_dist * max_dist {
                 continue;
             }
 
-            match closest_enemy {
-                None => {
-                    closest_enemy = Some(enemy_transform.translation - tower_transform.translation);
-                }
-                Some(diff) => {
-                    if dist_sq < diff.length_squared() {
-                        closest_enemy =
-                            Some(enemy_transform.translation - tower_transform.translation);
-                    }
+            // Skip enemy if it's not closer than the current closest enemy.
+            if let Some(direction) = closest_enemy_direction {
+                if dist_sq >= direction.length_squared() {
+                    continue;
                 }
             }
+
+            // Assign new closest enemy
+            closest_enemy_direction =
+                Some((enemy_transform.translation - tower_transform.translation).truncate());
         }
 
-        if let Some(diff) = closest_enemy {
-            let direction = diff.normalize_or_zero() * 200.0;
-            let angle = direction.angle_between(Vec3::X);
-            tower_transform.rotation = Quat::from_axis_angle(Vec3::Z, angle);
+        if let Some(target_direction) = closest_enemy_direction {
+            let target_angle = target_direction.into_angle();
+            let current_angle = {
+                let (axis, angle) = tower_transform.rotation.to_axis_angle();
+                normalize_angle(angle * axis.z)
+            };
+            let angle_to_target = target_angle - current_angle;
+
+            if angle_to_target.abs() > ANGULAR_SPEED {
+                let spin = if target_angle > current_angle {
+                    if angle_to_target < PI {
+                        COUNTER_CLOCKWISE
+                    } else {
+                        CLOCKWISE
+                    }
+                } else {
+                    if angle_to_target > -PI {
+                        CLOCKWISE
+                    } else {
+                        COUNTER_CLOCKWISE
+                    }
+                };
+                tower_transform.rotate(Quat::from_rotation_z(ANGULAR_SPEED * spin));
+                continue;
+            }
+            tower_transform.rotation = Quat::from_rotation_z(target_angle);
 
             if !(tower.last_projectile_time + 1.0 < time.seconds_since_startup()) {
                 continue;
@@ -191,9 +253,34 @@ fn tower_firing(
                     ..Default::default()
                 })
                 .insert(Projectile)
-                .insert(Velocity(Vec2::new(direction.x, direction.y)));
+                .insert(Velocity(target_direction.normalize_or_zero() * 200.0));
 
             tower.last_projectile_time = time.seconds_since_startup();
+        }
+    }
+}
+
+fn normalize_angle(angle: f32) -> f32 {
+    if angle < 0.0 {
+        return normalize_angle(angle + TAU);
+    }
+    if angle >= TAU {
+        return normalize_angle(angle - TAU);
+    }
+    angle
+}
+
+trait IntoAngle {
+    fn into_angle(self) -> f32;
+}
+
+impl IntoAngle for Vec2 {
+    fn into_angle(self) -> f32 {
+        let angle = f32::atan2(self.y, self.x);
+        if angle < 0.0 {
+            angle + TAU
+        } else {
+            angle
         }
     }
 }
