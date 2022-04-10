@@ -8,13 +8,41 @@ use std::f32::consts::{PI, TAU};
 
 fn main() {
     App::new()
+        .add_event::<EnemyDestroyed>()
         .insert_resource(ClearColor(Color::rgb(0.2, 0.2, 0.2)))
         .init_resource::<ProjectileAssets>()
+        .init_resource::<Path>()
         .add_plugins(DefaultPlugins)
         .add_startup_system(setup)
         .add_system(tower_firing)
         .add_system(apply_velocity)
+        .add_system(follow_path)
+        .add_system_to_stage(CoreStage::PostUpdate, destroy_enemy)
         .run();
+}
+
+struct EnemyDestroyed {
+    enemy: Entity,
+}
+
+const CELL_SIZE: f32 = 32.0;
+
+#[derive(Clone, Copy)]
+struct Coord {
+    x: i32,
+    y: i32,
+}
+
+impl Coord {
+    fn new(x: i32, y: i32) -> Self {
+        Coord { x, y }
+    }
+}
+
+impl From<Coord> for Vec2 {
+    fn from(coord: Coord) -> Self {
+        Self::new(coord.x as f32 * CELL_SIZE, coord.y as f32 * CELL_SIZE)
+    }
 }
 
 #[derive(Default)]
@@ -34,11 +62,61 @@ struct Enemy;
 #[derive(Component)]
 struct Projectile;
 
+#[derive(Component)]
+struct PathFollow {
+    progress: f32,
+}
+
+#[derive(Default)]
+struct Path {
+    nodes: Vec<Coord>,
+    segment_lengths: Vec<i32>,
+}
+
+impl Path {
+    fn new(nodes: Vec<Coord>) -> Path {
+        let segment_lengths = nodes
+            .windows(2)
+            .map(|segment| {
+                (segment[1].x - segment[0].x).abs() + (segment[1].y - segment[0].y).abs()
+            })
+            .collect();
+
+        Self {
+            nodes,
+            segment_lengths,
+        }
+    }
+
+    fn lerp(&self, progress: f32) -> Vec2 {
+        let mut tile_progress = (self.length() as f32 * CELL_SIZE) * progress;
+        for (i, segment) in self.nodes.windows(2).enumerate() {
+            let segment_length = self.segment_lengths[i] as f32 * CELL_SIZE;
+            if tile_progress > segment_length {
+                tile_progress -= segment_length;
+                continue;
+            }
+            let segment_progress = tile_progress / segment_length;
+            let segment_start: Vec2 = segment[0].into();
+            let segment_relative_end: Vec2 =
+                Coord::new(segment[1].x - segment[0].x, segment[1].y - segment[0].y).into();
+            return segment_start + segment_relative_end * segment_progress;
+        }
+        // Progress is outside of 0.0 - 1.0
+        Vec2::default()
+    }
+
+    fn length(&self) -> i32 {
+        self.segment_lengths.iter().fold(0, |acc, cur| acc + cur)
+    }
+}
+
 fn setup(
     mut commands: Commands,
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut projectile_assets: ResMut<ProjectileAssets>,
+    mut path: ResMut<Path>,
 ) {
     commands.spawn_bundle(OrthographicCameraBundle::new_2d());
 
@@ -46,6 +124,13 @@ fn setup(
         mesh: Mesh2dHandle(meshes.add(RegPoly::new(8, 2.0).into())),
         material: materials.add(Color::rgb(0.1, 0.1, 0.1).into()),
     };
+
+    *path = Path::new(vec![
+        Coord::new(-6, -6),
+        Coord::new(0, -6),
+        Coord::new(0, 6),
+        Coord::new(6, 6),
+    ]);
 
     // Build Slots
     commands.spawn_bundle(ColorMesh2dBundle {
@@ -171,11 +256,11 @@ fn setup(
         .spawn_bundle(ColorMesh2dBundle {
             mesh: Mesh2dHandle(meshes.add(RegPoly::new(4, 12.0).into())),
             material: materials.add(Color::rgb(1.0, 0.3, 0.0).into()),
-            transform: Transform::from_xyz(-256.0, 0.0, 0.0),
+            transform: Transform::from_xyz(0.0, 0.0, 0.0),
             ..Default::default()
         })
         .insert(Enemy)
-        .insert(Velocity(Vec2::new(32.0, 0.0)));
+        .insert(PathFollow { progress: 0.0 });
 }
 
 const CLOCKWISE: f32 = -1.0;
@@ -257,6 +342,27 @@ fn tower_firing(
 
             tower.last_projectile_time = time.seconds_since_startup();
         }
+    }
+}
+
+fn follow_path(
+    time: Res<Time>,
+    path: Res<Path>,
+    mut events: EventWriter<EnemyDestroyed>,
+    mut query: Query<(Entity, &mut Transform, &mut PathFollow)>,
+) {
+    for (entity, mut transform, mut path_follow) in query.iter_mut() {
+        path_follow.progress += 0.1 * time.delta_seconds();
+        if path_follow.progress >= 1.0 {
+            events.send(EnemyDestroyed { enemy: entity })
+        }
+        transform.translation = path.lerp(path_follow.progress).extend(0.0);
+    }
+}
+
+fn destroy_enemy(mut commands: Commands, mut events: EventReader<EnemyDestroyed>) {
+    for event in events.iter() {
+        commands.entity(event.enemy).despawn();
     }
 }
 
