@@ -61,6 +61,7 @@ struct EnemyAssets {
 
 #[derive(Component, Default)]
 struct Tower {
+    target: Option<Entity>,
     last_projectile_time: f64,
 }
 
@@ -314,40 +315,69 @@ fn spawn_enemies(
 const CLOCKWISE: f32 = -1.0;
 const COUNTER_CLOCKWISE: f32 = 1.0;
 const ANGULAR_SPEED: f32 = TAU / 200.0;
+const MAX_DISTANCE: f32 = 256.0;
 
 fn tower_firing(
     mut commands: Commands,
     time: Res<Time>,
     projectile_assets: Res<ProjectileAssets>,
     mut tower_query: Query<(&mut Tower, &mut Transform), Without<Enemy>>,
-    enemy_query: Query<&Transform, With<Enemy>>,
+    enemy_query: Query<(Entity, &Transform), With<Enemy>>,
 ) {
-    let max_dist = 256.0;
     for (mut tower, mut tower_transform) in tower_query.iter_mut() {
-        let mut closest_enemy_direction: Option<Vec2> = None;
-        for enemy_transform in enemy_query.iter() {
-            let dist_sq = tower_transform
-                .translation
-                .distance_squared(enemy_transform.translation);
+        // Loop hack: the loop here is only to early-return from the block, not
+        // to actually loop.
+        let target_direction = loop {
+            // Check whether the current target is still in range.
+            if let Some(target) = tower.target {
+                let enemy = enemy_query.get(target);
+                if let Ok((_, enemy_transform)) = enemy {
+                    let dist_sq = tower_transform
+                        .translation
+                        .distance_squared(enemy_transform.translation);
 
-            // Skip enemy if it's out of range.
-            if dist_sq > max_dist * max_dist {
-                continue;
-            }
-
-            // Skip enemy if it's not closer than the current closest enemy.
-            if let Some(direction) = closest_enemy_direction {
-                if dist_sq >= direction.length_squared() {
-                    continue;
+                    if dist_sq <= MAX_DISTANCE * MAX_DISTANCE {
+                        break Some(
+                            (enemy_transform.translation - tower_transform.translation).truncate(),
+                        );
+                    }
                 }
+            };
+
+            // Search for a new target.
+            let closest_enemy_direction: Option<Vec2> =
+                enemy_query
+                    .iter()
+                    .fold(None, |closest, (enemy, enemy_transform)| {
+                        let dist_sq = tower_transform
+                            .translation
+                            .distance_squared(enemy_transform.translation);
+
+                        // Skip enemy if it's out of range.
+                        if dist_sq > MAX_DISTANCE * MAX_DISTANCE {
+                            return closest;
+                        }
+
+                        // Skip enemy if it's not closer than the current closest enemy.
+                        if let Some(direction) = closest {
+                            if dist_sq >= direction.length_squared() {
+                                return closest;
+                            }
+                        }
+
+                        tower.target = Some(enemy);
+                        return Some(
+                            (enemy_transform.translation - tower_transform.translation).truncate(),
+                        );
+                    });
+
+            if closest_enemy_direction.is_none() {
+                tower.target = None;
             }
+            break closest_enemy_direction;
+        };
 
-            // Assign new closest enemy
-            closest_enemy_direction =
-                Some((enemy_transform.translation - tower_transform.translation).truncate());
-        }
-
-        if let Some(target_direction) = closest_enemy_direction {
+        if let Some(target_direction) = target_direction {
             let target_angle = target_direction.into_angle();
             let current_angle = {
                 let (axis, angle) = tower_transform.rotation.to_axis_angle();
