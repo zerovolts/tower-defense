@@ -20,6 +20,7 @@ fn main() {
         .add_system(follow_path)
         .add_system(spawn_enemies)
         .add_system(spawn_towers)
+        .add_system(destroy_projectile)
         .add_system_to_stage(CoreStage::PostUpdate, destroy_enemy)
         .run();
 }
@@ -82,7 +83,9 @@ struct Tower {
 struct Enemy;
 
 #[derive(Component)]
-struct Projectile;
+struct Projectile {
+    creation_time: f64,
+}
 
 #[derive(Component)]
 struct PathFollow {
@@ -396,7 +399,9 @@ fn tower_firing(
                     transform: tower_transform.clone(),
                     ..Default::default()
                 })
-                .insert(Projectile)
+                .insert(Projectile {
+                    creation_time: time.seconds_since_startup(),
+                })
                 .insert(Velocity(target_direction.normalize_or_zero() * 200.0));
 
             tower.last_projectile_time = time.seconds_since_startup();
@@ -422,6 +427,18 @@ fn follow_path(
 fn destroy_enemy(mut commands: Commands, mut events: EventReader<EnemyDestroyed>) {
     for event in events.iter() {
         commands.entity(event.enemy).despawn();
+    }
+}
+
+fn destroy_projectile(
+    mut commands: Commands,
+    time: Res<Time>,
+    query: Query<(Entity, &Projectile)>,
+) {
+    for (entity, projectile) in query.iter() {
+        if time.seconds_since_startup() - projectile.creation_time > 2.0 {
+            commands.entity(entity).despawn();
+        }
     }
 }
 
