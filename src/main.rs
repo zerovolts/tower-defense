@@ -9,6 +9,7 @@ use std::f32::consts::{PI, TAU};
 fn main() {
     App::new()
         .add_event::<EnemyDestroyed>()
+        .add_event::<SpawnTower>()
         .insert_resource(ClearColor(Color::rgb(0.2, 0.2, 0.2)))
         .init_resource::<ArtAssets>()
         .init_resource::<Path>()
@@ -18,12 +19,17 @@ fn main() {
         .add_system(apply_velocity)
         .add_system(follow_path)
         .add_system(spawn_enemies)
+        .add_system(spawn_towers)
         .add_system_to_stage(CoreStage::PostUpdate, destroy_enemy)
         .run();
 }
 
 struct EnemyDestroyed {
     enemy: Entity,
+}
+
+struct SpawnTower {
+    position: Coord,
 }
 
 const CELL_SIZE: f32 = 32.0;
@@ -50,6 +56,14 @@ impl From<Coord> for Vec2 {
 struct ArtAssets {
     projectile: MeshMaterial,
     enemy: MeshMaterial,
+    tower: TowerAssets,
+}
+
+#[derive(Default)]
+struct TowerAssets {
+    base: MeshMaterial,
+    barrel: MeshMaterial,
+    barrel_cap: MeshMaterial,
 }
 
 #[derive(Default)]
@@ -125,6 +139,7 @@ fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut art_assets: ResMut<ArtAssets>,
     mut path: ResMut<Path>,
+    mut tower_spawn_events: EventWriter<SpawnTower>,
 ) {
     commands.spawn_bundle(OrthographicCameraBundle::new_2d());
 
@@ -136,6 +151,20 @@ fn setup(
         enemy: MeshMaterial {
             mesh: Mesh2dHandle(meshes.add(RegPoly::new(4, 12.0).into())),
             material: materials.add(Color::rgb(1.0, 0.3, 0.0).into()),
+        },
+        tower: TowerAssets {
+            base: MeshMaterial {
+                mesh: Mesh2dHandle(meshes.add(RegPoly::new(6, 12.0).into())),
+                material: materials.add(Color::rgb(0.0, 0.5, 1.0).into()),
+            },
+            barrel: MeshMaterial {
+                mesh: Mesh2dHandle(meshes.add(shape::Quad::new(Vec2::new(24.0, 4.0)).into())),
+                material: materials.add(Color::rgb(0.4, 0.4, 0.4).into()),
+            },
+            barrel_cap: MeshMaterial {
+                mesh: Mesh2dHandle(meshes.add(shape::Quad::new(Vec2::new(8.0, 8.0)).into())),
+                material: materials.add(Color::rgb(0.4, 0.4, 0.4).into()),
+            },
         },
     };
 
@@ -173,97 +202,18 @@ fn setup(
     });
 
     // Tower
-    commands
-        .spawn_bundle(ColorMesh2dBundle {
-            mesh: Mesh2dHandle(meshes.add(RegPoly::new(6, 12.0).into())),
-            material: materials.add(Color::rgb(0.0, 0.5, 1.0).into()),
-            transform: Transform::from_xyz(64.0, 64.0, 0.0),
-            ..Default::default()
-        })
-        .insert(Tower::default())
-        .with_children(|parent| {
-            parent.spawn_bundle(ColorMesh2dBundle {
-                mesh: Mesh2dHandle(meshes.add(shape::Quad::new(Vec2::new(24.0, 4.0)).into())),
-                material: materials.add(Color::rgb(0.4, 0.4, 0.4).into()),
-                transform: Transform::from_xyz(12.0, 0.0, 1.0),
-                ..Default::default()
-            });
-            parent.spawn_bundle(ColorMesh2dBundle {
-                mesh: Mesh2dHandle(meshes.add(shape::Quad::new(Vec2::new(8.0, 8.0)).into())),
-                material: materials.add(Color::rgb(0.4, 0.4, 0.4).into()),
-                transform: Transform::from_xyz(0.0, 0.0, 1.0),
-                ..Default::default()
-            });
-        });
-
-    commands
-        .spawn_bundle(ColorMesh2dBundle {
-            mesh: Mesh2dHandle(meshes.add(RegPoly::new(6, 12.0).into())),
-            material: materials.add(Color::rgb(0.0, 0.5, 1.0).into()),
-            transform: Transform::from_xyz(-64.0, 64.0, 0.0),
-            ..Default::default()
-        })
-        .insert(Tower::default())
-        .with_children(|parent| {
-            parent.spawn_bundle(ColorMesh2dBundle {
-                mesh: Mesh2dHandle(meshes.add(shape::Quad::new(Vec2::new(24.0, 4.0)).into())),
-                material: materials.add(Color::rgb(0.4, 0.4, 0.4).into()),
-                transform: Transform::from_xyz(12.0, 0.0, 1.0),
-                ..Default::default()
-            });
-            parent.spawn_bundle(ColorMesh2dBundle {
-                mesh: Mesh2dHandle(meshes.add(shape::Quad::new(Vec2::new(8.0, 8.0)).into())),
-                material: materials.add(Color::rgb(0.4, 0.4, 0.4).into()),
-                transform: Transform::from_xyz(0.0, 0.0, 1.0),
-                ..Default::default()
-            });
-        });
-
-    commands
-        .spawn_bundle(ColorMesh2dBundle {
-            mesh: Mesh2dHandle(meshes.add(RegPoly::new(6, 12.0).into())),
-            material: materials.add(Color::rgb(0.0, 0.5, 1.0).into()),
-            transform: Transform::from_xyz(-64.0, -64.0, 0.0),
-            ..Default::default()
-        })
-        .insert(Tower::default())
-        .with_children(|parent| {
-            parent.spawn_bundle(ColorMesh2dBundle {
-                mesh: Mesh2dHandle(meshes.add(shape::Quad::new(Vec2::new(24.0, 4.0)).into())),
-                material: materials.add(Color::rgb(0.4, 0.4, 0.4).into()),
-                transform: Transform::from_xyz(12.0, 0.0, 1.0),
-                ..Default::default()
-            });
-            parent.spawn_bundle(ColorMesh2dBundle {
-                mesh: Mesh2dHandle(meshes.add(shape::Quad::new(Vec2::new(8.0, 8.0)).into())),
-                material: materials.add(Color::rgb(0.4, 0.4, 0.4).into()),
-                transform: Transform::from_xyz(0.0, 0.0, 1.0),
-                ..Default::default()
-            });
-        });
-
-    commands
-        .spawn_bundle(ColorMesh2dBundle {
-            mesh: Mesh2dHandle(meshes.add(RegPoly::new(6, 12.0).into())),
-            material: materials.add(Color::rgb(0.0, 0.5, 1.0).into()),
-            transform: Transform::from_xyz(64.0, -64.0, 0.0),
-            ..Default::default()
-        })
-        .insert(Tower::default())
-        .with_children(|parent| {
-            parent.spawn_bundle(ColorMesh2dBundle {
-                mesh: Mesh2dHandle(meshes.add(shape::Quad::new(Vec2::new(24.0, 4.0)).into())),
-                material: materials.add(Color::rgb(0.4, 0.4, 0.4).into()),
-                transform: Transform::from_xyz(12.0, 0.0, 1.0),
-                ..Default::default()
-            });
-            parent.spawn_bundle(ColorMesh2dBundle {
-                mesh: Mesh2dHandle(meshes.add(shape::Quad::new(Vec2::new(8.0, 8.0)).into())),
-                material: materials.add(Color::rgb(0.4, 0.4, 0.4).into()),
-                transform: Transform::from_xyz(0.0, 0.0, 1.0),
-                ..Default::default()
-            });
-        });
+    tower_spawn_events.send(SpawnTower {
+        position: Coord::new(2, 2),
+    });
+    tower_spawn_events.send(SpawnTower {
+        position: Coord::new(-2, 2),
+    });
+    tower_spawn_events.send(SpawnTower {
+        position: Coord::new(-2, -2),
+    });
+    tower_spawn_events.send(SpawnTower {
+        position: Coord::new(2, -2),
+    });
 
     commands
         .spawn_bundle(ColorMesh2dBundle {
@@ -275,6 +225,38 @@ fn setup(
         .insert(EnemySpawner {
             last_spawn_time: 0.0,
         });
+}
+
+fn spawn_towers(
+    mut commands: Commands,
+    assets: Res<ArtAssets>,
+    mut events: EventReader<SpawnTower>,
+) {
+    for event in events.iter() {
+        let position: Vec2 = event.position.into();
+        commands
+            .spawn_bundle(ColorMesh2dBundle {
+                mesh: assets.tower.base.mesh.clone(),
+                material: assets.tower.base.material.clone(),
+                transform: Transform::from_translation(position.extend(0.0)),
+                ..Default::default()
+            })
+            .insert(Tower::default())
+            .with_children(|parent| {
+                parent.spawn_bundle(ColorMesh2dBundle {
+                    mesh: assets.tower.barrel.mesh.clone(),
+                    material: assets.tower.barrel.material.clone(),
+                    transform: Transform::from_xyz(12.0, 0.0, 1.0),
+                    ..Default::default()
+                });
+                parent.spawn_bundle(ColorMesh2dBundle {
+                    mesh: assets.tower.barrel_cap.mesh.clone(),
+                    material: assets.tower.barrel_cap.material.clone(),
+                    transform: Transform::from_xyz(0.0, 0.0, 1.0),
+                    ..Default::default()
+                });
+            });
+    }
 }
 
 #[derive(Component)]
