@@ -10,8 +10,7 @@ fn main() {
     App::new()
         .add_event::<EnemyDestroyed>()
         .insert_resource(ClearColor(Color::rgb(0.2, 0.2, 0.2)))
-        .init_resource::<ProjectileAssets>()
-        .init_resource::<EnemyAssets>()
+        .init_resource::<ArtAssets>()
         .init_resource::<Path>()
         .add_plugins(DefaultPlugins)
         .add_startup_system(setup)
@@ -48,13 +47,13 @@ impl From<Coord> for Vec2 {
 }
 
 #[derive(Default)]
-struct ProjectileAssets {
-    mesh: Mesh2dHandle,
-    material: Handle<ColorMaterial>,
+struct ArtAssets {
+    projectile: MeshMaterial,
+    enemy: MeshMaterial,
 }
 
 #[derive(Default)]
-struct EnemyAssets {
+struct MeshMaterial {
     mesh: Mesh2dHandle,
     material: Handle<ColorMaterial>,
 }
@@ -124,20 +123,20 @@ fn setup(
     mut commands: Commands,
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut projectile_assets: ResMut<ProjectileAssets>,
-    mut enemy_assets: ResMut<EnemyAssets>,
+    mut art_assets: ResMut<ArtAssets>,
     mut path: ResMut<Path>,
 ) {
     commands.spawn_bundle(OrthographicCameraBundle::new_2d());
 
-    *projectile_assets = ProjectileAssets {
-        mesh: Mesh2dHandle(meshes.add(RegPoly::new(8, 2.0).into())),
-        material: materials.add(Color::rgb(0.1, 0.1, 0.1).into()),
-    };
-
-    *enemy_assets = EnemyAssets {
-        mesh: Mesh2dHandle(meshes.add(RegPoly::new(4, 12.0).into())),
-        material: materials.add(Color::rgb(1.0, 0.3, 0.0).into()),
+    *art_assets = ArtAssets {
+        projectile: MeshMaterial {
+            mesh: Mesh2dHandle(meshes.add(RegPoly::new(8, 2.0).into())),
+            material: materials.add(Color::rgb(0.1, 0.1, 0.1).into()),
+        },
+        enemy: MeshMaterial {
+            mesh: Mesh2dHandle(meshes.add(RegPoly::new(4, 12.0).into())),
+            material: materials.add(Color::rgb(1.0, 0.3, 0.0).into()),
+        },
     };
 
     *path = Path::new(vec![
@@ -285,7 +284,7 @@ struct EnemySpawner {
 
 fn spawn_enemies(
     mut commands: Commands,
-    assets: Res<EnemyAssets>,
+    assets: Res<ArtAssets>,
     time: Res<Time>,
     mut query: Query<(&mut EnemySpawner, &Transform)>,
 ) {
@@ -296,8 +295,8 @@ fn spawn_enemies(
 
         commands
             .spawn_bundle(ColorMesh2dBundle {
-                mesh: assets.mesh.clone(),
-                material: assets.material.clone(),
+                mesh: assets.enemy.mesh.clone(),
+                material: assets.enemy.material.clone(),
                 transform: Transform::from_xyz(
                     transform.translation.x,
                     transform.translation.y,
@@ -320,7 +319,7 @@ const MAX_DISTANCE: f32 = 256.0;
 fn tower_firing(
     mut commands: Commands,
     time: Res<Time>,
-    projectile_assets: Res<ProjectileAssets>,
+    art_assets: Res<ArtAssets>,
     mut tower_query: Query<(&mut Tower, &mut Transform), Without<Enemy>>,
     enemy_query: Query<(Entity, &Transform), With<Enemy>>,
 ) {
@@ -410,8 +409,8 @@ fn tower_firing(
 
             commands
                 .spawn_bundle(ColorMesh2dBundle {
-                    mesh: projectile_assets.mesh.clone(),
-                    material: projectile_assets.material.clone(),
+                    mesh: art_assets.projectile.mesh.clone(),
+                    material: art_assets.projectile.material.clone(),
                     transform: tower_transform.clone(),
                     ..Default::default()
                 })
