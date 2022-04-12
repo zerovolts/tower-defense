@@ -21,6 +21,7 @@ fn main() {
         .add_system(spawn_enemies)
         .add_system(spawn_towers)
         .add_system(destroy_projectile)
+        .add_system(projectile_hit)
         .add_system_to_stage(CoreStage::PostUpdate, destroy_enemy)
         .run();
 }
@@ -173,9 +174,9 @@ fn setup(
 
     *path = Path::new(vec![
         Coord::new(-6, -6),
-        Coord::new(0, -6),
-        Coord::new(0, 6),
+        Coord::new(-6, 6),
         Coord::new(6, 6),
+        Coord::new(6, -6),
     ]);
 
     // Build Slots
@@ -421,6 +422,24 @@ fn follow_path(
             events.send(EnemyDestroyed { enemy: entity })
         }
         transform.translation = path.lerp(path_follow.progress).extend(0.0);
+    }
+}
+
+fn projectile_hit(
+    mut commands: Commands,
+    projectile_query: Query<(Entity, &Transform), With<Projectile>>,
+    enemy_query: Query<&Transform, With<Enemy>>,
+) {
+    for enemy_transform in enemy_query.iter() {
+        for (projectile_entity, projectile_transform) in projectile_query.iter() {
+            if projectile_transform
+                .translation
+                .distance(enemy_transform.translation)
+                < 20.0
+            {
+                commands.entity(projectile_entity).despawn();
+            }
+        }
     }
 }
 
