@@ -4,29 +4,27 @@ use std::f32::consts::{PI, TAU};
 
 use crate::{
     coord::Coord,
-    enemy::{Enemy, EnemyPlugin, Health},
+    enemy::{Enemy, EnemyPlugin},
     mesh::{MeshMaterial, RegPoly},
+    projectile::{ProjectilePlugin, SpawnProjectile},
 };
 
 mod coord;
 mod enemy;
 mod mesh;
+mod projectile;
 
 fn main() {
     App::new()
         .add_plugin(EnemyPlugin)
+        .add_plugin(ProjectilePlugin)
         .add_event::<SpawnTower>()
-        .add_event::<SpawnProjectile>()
         .insert_resource(ClearColor(Color::rgb(0.2, 0.2, 0.2)))
         .init_resource::<ArtAssets>()
         .add_plugins(DefaultPlugins)
         .add_startup_system(setup)
         .add_system(tower_firing)
-        .add_system(apply_velocity)
-        .add_system(spawn_projectile)
         .add_system(spawn_towers)
-        .add_system(destroy_projectile)
-        .add_system(projectile_hit)
         .run();
 }
 
@@ -36,7 +34,6 @@ struct SpawnTower {
 
 #[derive(Default)]
 struct ArtAssets {
-    projectile: MeshMaterial,
     tower: TowerAssets,
 }
 
@@ -52,11 +49,6 @@ struct Tower {
     last_projectile_time: f64,
 }
 
-#[derive(Component)]
-struct Projectile {
-    creation_time: f64,
-}
-
 fn setup(
     mut commands: Commands,
     mut materials: ResMut<Assets<ColorMaterial>>,
@@ -67,10 +59,6 @@ fn setup(
     commands.spawn_bundle(OrthographicCameraBundle::new_2d());
 
     *art_assets = ArtAssets {
-        projectile: MeshMaterial {
-            mesh: Mesh2dHandle(meshes.add(RegPoly::new(8, 2.0).into())),
-            material: materials.add(Color::rgb(0.1, 0.1, 0.1).into()),
-        },
         tower: TowerAssets {
             base: MeshMaterial {
                 mesh: Mesh2dHandle(meshes.add(RegPoly::new(6, 12.0).into())),
@@ -265,67 +253,6 @@ fn tower_firing(
     }
 }
 
-struct SpawnProjectile {
-    position: Vec2,
-    direction: Vec2,
-}
-
-fn spawn_projectile(
-    mut commands: Commands,
-    time: Res<Time>,
-    assets: Res<ArtAssets>,
-    mut events: EventReader<SpawnProjectile>,
-) {
-    for event in events.iter() {
-        commands
-            .spawn_bundle(ColorMesh2dBundle {
-                mesh: assets.projectile.mesh.clone(),
-                material: assets.projectile.material.clone(),
-                transform: Transform::from_translation(event.position.extend(0.0)),
-                ..Default::default()
-            })
-            .insert(Projectile {
-                creation_time: time.seconds_since_startup(),
-            })
-            .insert(Velocity(event.direction.normalize_or_zero() * 200.0));
-    }
-}
-
-fn projectile_hit(
-    mut commands: Commands,
-    projectile_query: Query<(Entity, &Transform), With<Projectile>>,
-    mut enemy_query: Query<(&mut Health, &Transform), With<Enemy>>,
-) {
-    for (projectile_entity, projectile_transform) in projectile_query.iter() {
-        for (mut enemy_health, enemy_transform) in enemy_query.iter_mut() {
-            if projectile_transform
-                .translation
-                .distance(enemy_transform.translation)
-                < 20.0
-            {
-                if enemy_health.current > 0 {
-                    enemy_health.current -= 1;
-                }
-                commands.entity(projectile_entity).despawn();
-                // Projectiles should only affect a single enemy.
-                break;
-            }
-        }
-    }
-}
-
-fn destroy_projectile(
-    mut commands: Commands,
-    time: Res<Time>,
-    query: Query<(Entity, &Projectile)>,
-) {
-    for (entity, projectile) in query.iter() {
-        if time.seconds_since_startup() - projectile.creation_time > 2.0 {
-            commands.entity(entity).despawn();
-        }
-    }
-}
-
 fn normalize_angle(angle: f32) -> f32 {
     if angle < 0.0 {
         return normalize_angle(angle + TAU);
@@ -348,14 +275,5 @@ impl IntoAngle for Vec2 {
         } else {
             angle
         }
-    }
-}
-
-#[derive(Component)]
-struct Velocity(Vec2);
-
-fn apply_velocity(time: Res<Time>, mut query: Query<(&mut Transform, &Velocity)>) {
-    for (mut transform, velocity) in query.iter_mut() {
-        transform.translation += velocity.0.extend(0.0) * time.delta_seconds();
     }
 }
