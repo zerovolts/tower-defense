@@ -22,8 +22,20 @@ fn main() {
         .add_system(spawn_towers)
         .add_system(destroy_projectile)
         .add_system(projectile_hit)
+        .add_system_to_stage(CoreStage::PostUpdate, enemy_death)
         .add_system_to_stage(CoreStage::PostUpdate, destroy_enemy)
         .run();
+}
+
+#[derive(Component)]
+struct Health {
+    current: i32,
+}
+
+impl Health {
+    fn new(max: i32) -> Self {
+        Self { current: max }
+    }
 }
 
 struct EnemyDestroyed {
@@ -173,57 +185,58 @@ fn setup(
     };
 
     *path = Path::new(vec![
-        Coord::new(-6, -6),
-        Coord::new(-6, 6),
-        Coord::new(6, 6),
-        Coord::new(6, -6),
+        Coord::new(-3, -3),
+        Coord::new(-3, 3),
+        Coord::new(3, 3),
+        Coord::new(3, -3),
+        Coord::new(-3, -3),
     ]);
 
     // Build Slots
     commands.spawn_bundle(ColorMesh2dBundle {
         mesh: Mesh2dHandle(meshes.add(shape::Quad::new(Vec2::new(30.0, 30.0)).into())),
         material: materials.add(Color::rgb(0.3, 0.3, 0.3).into()),
-        transform: Transform::from_xyz(64.0, 64.0, 0.0),
+        transform: Transform::from_xyz(32.0, 32.0, 0.0),
         ..Default::default()
     });
     commands.spawn_bundle(ColorMesh2dBundle {
         mesh: Mesh2dHandle(meshes.add(shape::Quad::new(Vec2::new(30.0, 30.0)).into())),
         material: materials.add(Color::rgb(0.3, 0.3, 0.3).into()),
-        transform: Transform::from_xyz(-64.0, 64.0, 0.0),
+        transform: Transform::from_xyz(-32.0, 32.0, 0.0),
         ..Default::default()
     });
     commands.spawn_bundle(ColorMesh2dBundle {
         mesh: Mesh2dHandle(meshes.add(shape::Quad::new(Vec2::new(30.0, 30.0)).into())),
         material: materials.add(Color::rgb(0.3, 0.3, 0.3).into()),
-        transform: Transform::from_xyz(-64.0, -64.0, 0.0),
+        transform: Transform::from_xyz(-32.0, -32.0, 0.0),
         ..Default::default()
     });
     commands.spawn_bundle(ColorMesh2dBundle {
         mesh: Mesh2dHandle(meshes.add(shape::Quad::new(Vec2::new(30.0, 30.0)).into())),
         material: materials.add(Color::rgb(0.3, 0.3, 0.3).into()),
-        transform: Transform::from_xyz(64.0, -64.0, 0.0),
+        transform: Transform::from_xyz(32.0, -32.0, 0.0),
         ..Default::default()
     });
 
     // Tower
     tower_spawn_events.send(SpawnTower {
-        position: Coord::new(2, 2),
+        position: Coord::new(1, 1),
     });
     tower_spawn_events.send(SpawnTower {
-        position: Coord::new(-2, 2),
+        position: Coord::new(-1, 1),
     });
     tower_spawn_events.send(SpawnTower {
-        position: Coord::new(-2, -2),
+        position: Coord::new(-1, -1),
     });
     tower_spawn_events.send(SpawnTower {
-        position: Coord::new(2, -2),
+        position: Coord::new(1, -1),
     });
 
     commands
         .spawn_bundle(ColorMesh2dBundle {
             mesh: Mesh2dHandle(meshes.add(RegPoly::new(6, 14.0).into())),
             material: materials.add(Color::rgb(0.4, 0.2, 0.6).into()),
-            transform: Transform::from_xyz(-192.0, -192.0, 1.0),
+            transform: Transform::from_xyz(-96.0, -96.0, 1.0),
             ..Default::default()
         })
         .insert(EnemySpawner {
@@ -275,7 +288,7 @@ fn spawn_enemies(
     mut query: Query<(&mut EnemySpawner, &Transform)>,
 ) {
     for (mut spawner, transform) in query.iter_mut() {
-        if time.seconds_since_startup() - spawner.last_spawn_time < 1.0 {
+        if time.seconds_since_startup() - spawner.last_spawn_time < 2.0 {
             continue;
         }
 
@@ -291,6 +304,7 @@ fn spawn_enemies(
                 ..Default::default()
             })
             .insert(Enemy)
+            .insert(Health::new(12))
             .insert(PathFollow { progress: 0.0 });
 
         spawner.last_spawn_time = time.seconds_since_startup();
@@ -417,7 +431,7 @@ fn follow_path(
     mut query: Query<(Entity, &mut Transform, &mut PathFollow)>,
 ) {
     for (entity, mut transform, mut path_follow) in query.iter_mut() {
-        path_follow.progress += 0.1 * time.delta_seconds();
+        path_follow.progress += 0.025 * time.delta_seconds();
         if path_follow.progress >= 1.0 {
             events.send(EnemyDestroyed { enemy: entity })
         }
@@ -428,24 +442,40 @@ fn follow_path(
 fn projectile_hit(
     mut commands: Commands,
     projectile_query: Query<(Entity, &Transform), With<Projectile>>,
-    enemy_query: Query<&Transform, With<Enemy>>,
+    mut enemy_query: Query<(&mut Health, &Transform), With<Enemy>>,
 ) {
-    for enemy_transform in enemy_query.iter() {
-        for (projectile_entity, projectile_transform) in projectile_query.iter() {
+    for (projectile_entity, projectile_transform) in projectile_query.iter() {
+        for (mut enemy_health, enemy_transform) in enemy_query.iter_mut() {
             if projectile_transform
                 .translation
                 .distance(enemy_transform.translation)
                 < 20.0
             {
+                if enemy_health.current > 0 {
+                    enemy_health.current -= 1;
+                }
                 commands.entity(projectile_entity).despawn();
+                // Projectiles should only affect a single enemy.
+                break;
             }
+        }
+    }
+}
+
+fn enemy_death(
+    mut commands: Commands,
+    query: Query<(Entity, &Health), (With<Enemy>, Changed<Health>)>,
+) {
+    for (entity, health) in query.iter() {
+        if health.current <= 0 {
+            commands.entity(entity).despawn_recursive();
         }
     }
 }
 
 fn destroy_enemy(mut commands: Commands, mut events: EventReader<EnemyDestroyed>) {
     for event in events.iter() {
-        commands.entity(event.enemy).despawn();
+        commands.entity(event.enemy).despawn_recursive();
     }
 }
 
