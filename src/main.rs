@@ -6,6 +6,10 @@ use bevy::{
 
 use std::f32::consts::{PI, TAU};
 
+use crate::coord::{Coord, CELL_SIZE};
+
+mod coord;
+
 fn main() {
     App::new()
         .add_event::<EnemyDestroyed>()
@@ -44,26 +48,6 @@ struct EnemyDestroyed {
 
 struct SpawnTower {
     position: Coord,
-}
-
-const CELL_SIZE: f32 = 32.0;
-
-#[derive(Clone, Copy)]
-struct Coord {
-    x: i32,
-    y: i32,
-}
-
-impl Coord {
-    fn new(x: i32, y: i32) -> Self {
-        Coord { x, y }
-    }
-}
-
-impl From<Coord> for Vec2 {
-    fn from(coord: Coord) -> Self {
-        Self::new(coord.x as f32 * CELL_SIZE, coord.y as f32 * CELL_SIZE)
-    }
 }
 
 #[derive(Default)]
