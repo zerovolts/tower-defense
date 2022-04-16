@@ -14,6 +14,7 @@ fn main() {
     App::new()
         .add_event::<EnemyDestroyed>()
         .add_event::<SpawnTower>()
+        .add_event::<SpawnProjectile>()
         .insert_resource(ClearColor(Color::rgb(0.2, 0.2, 0.2)))
         .init_resource::<ArtAssets>()
         .init_resource::<Path>()
@@ -22,6 +23,7 @@ fn main() {
         .add_system(tower_firing)
         .add_system(apply_velocity)
         .add_system(follow_path)
+        .add_system(spawn_projectile)
         .add_system(spawn_enemies)
         .add_system(spawn_towers)
         .add_system(destroy_projectile)
@@ -294,9 +296,8 @@ const ANGULAR_SPEED: f32 = TAU / 200.0;
 const MAX_DISTANCE: f32 = 256.0;
 
 fn tower_firing(
-    mut commands: Commands,
     time: Res<Time>,
-    art_assets: Res<ArtAssets>,
+    mut events: EventWriter<SpawnProjectile>,
     mut tower_query: Query<(&mut Tower, &mut Transform), Without<Enemy>>,
     enemy_query: Query<(Entity, &Transform), With<Enemy>>,
 ) {
@@ -384,20 +385,39 @@ fn tower_firing(
                 continue;
             }
 
-            commands
-                .spawn_bundle(ColorMesh2dBundle {
-                    mesh: art_assets.projectile.mesh.clone(),
-                    material: art_assets.projectile.material.clone(),
-                    transform: tower_transform.clone(),
-                    ..Default::default()
-                })
-                .insert(Projectile {
-                    creation_time: time.seconds_since_startup(),
-                })
-                .insert(Velocity(target_direction.normalize_or_zero() * 200.0));
+            events.send(SpawnProjectile {
+                position: tower_transform.translation.truncate(),
+                direction: target_direction,
+            });
 
             tower.last_projectile_time = time.seconds_since_startup();
         }
+    }
+}
+
+struct SpawnProjectile {
+    position: Vec2,
+    direction: Vec2,
+}
+
+fn spawn_projectile(
+    mut commands: Commands,
+    time: Res<Time>,
+    assets: Res<ArtAssets>,
+    mut events: EventReader<SpawnProjectile>,
+) {
+    for event in events.iter() {
+        commands
+            .spawn_bundle(ColorMesh2dBundle {
+                mesh: assets.projectile.mesh.clone(),
+                material: assets.projectile.material.clone(),
+                transform: Transform::from_translation(event.position.extend(0.0)),
+                ..Default::default()
+            })
+            .insert(Projectile {
+                creation_time: time.seconds_since_startup(),
+            })
+            .insert(Velocity(event.direction.normalize_or_zero() * 200.0));
     }
 }
 
