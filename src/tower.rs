@@ -15,8 +15,8 @@ impl Plugin for TowerPlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<SpawnTower>()
             .add_startup_system(tower_setup)
-            .add_system(tower_firing)
-            .add_system(spawn_towers);
+            .add_system(tower_shoot)
+            .add_system(tower_spawn);
     }
 }
 
@@ -72,7 +72,7 @@ struct SpawnTower {
     position: Coord,
 }
 
-fn spawn_towers(
+fn tower_spawn(
     mut commands: Commands,
     assets: Res<TowerAssets>,
     mut events: EventReader<SpawnTower>,
@@ -109,7 +109,7 @@ const COUNTER_CLOCKWISE: f32 = 1.0;
 const ANGULAR_SPEED: f32 = TAU / 200.0;
 const MAX_DISTANCE: f32 = 256.0;
 
-fn tower_firing(
+fn tower_shoot(
     time: Res<Time>,
     mut events: EventWriter<SpawnProjectile>,
     mut tower_query: Query<(&mut Tower, &mut Transform), Without<Enemy>>,

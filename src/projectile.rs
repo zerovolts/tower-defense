@@ -12,9 +12,9 @@ impl Plugin for ProjectilePlugin {
         app.add_event::<SpawnProjectile>()
             .add_startup_system(projectile_setup)
             .add_system(apply_velocity)
-            .add_system(spawn_projectile)
+            .add_system(projectile_spawn)
             .add_system(projectile_hit)
-            .add_system(destroy_projectile);
+            .add_system(projectile_destroy);
     }
 }
 
@@ -42,7 +42,7 @@ pub struct SpawnProjectile {
     pub direction: Vec2,
 }
 
-fn spawn_projectile(
+fn projectile_spawn(
     mut commands: Commands,
     time: Res<Time>,
     assets: Res<ProjectileAssets>,
@@ -86,7 +86,7 @@ fn projectile_hit(
     }
 }
 
-fn destroy_projectile(
+fn projectile_destroy(
     mut commands: Commands,
     time: Res<Time>,
     query: Query<(Entity, &Projectile)>,

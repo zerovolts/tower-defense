@@ -9,19 +9,17 @@ pub struct EnemyPlugin;
 
 impl Plugin for EnemyPlugin {
     fn build(&self, app: &mut App) {
-        app.add_event::<EnemyDestroyed>()
-            .add_startup_system(enemy_setup)
-            .add_system(follow_path)
-            .add_system(spawn_enemies)
-            .add_system_to_stage(CoreStage::PostUpdate, enemy_death)
-            .add_system_to_stage(CoreStage::PostUpdate, destroy_enemy);
+        app.add_startup_system(enemy_setup)
+            .add_system(enemy_spawn)
+            .add_system(enemy_path_follow)
+            .add_system_to_stage(CoreStage::PostUpdate, enemy_destroy);
     }
 }
 
 #[derive(Component)]
 pub struct Enemy;
 
-fn enemy_death(
+fn enemy_destroy(
     mut commands: Commands,
     query: Query<(Entity, &Health), (With<Enemy>, Changed<Health>)>,
 ) {
@@ -29,12 +27,6 @@ fn enemy_death(
         if health.current <= 0 {
             commands.entity(entity).despawn_recursive();
         }
-    }
-}
-
-fn destroy_enemy(mut commands: Commands, mut events: EventReader<EnemyDestroyed>) {
-    for event in events.iter() {
-        commands.entity(event.enemy).despawn_recursive();
     }
 }
 
@@ -80,10 +72,6 @@ impl Health {
     fn new(max: i32) -> Self {
         Self { current: max }
     }
-}
-
-struct EnemyDestroyed {
-    enemy: Entity,
 }
 
 #[derive(Default)]
@@ -135,16 +123,16 @@ struct PathFollow {
     progress: f32,
 }
 
-fn follow_path(
+fn enemy_path_follow(
+    mut commands: Commands,
     time: Res<Time>,
     path: Res<Path>,
-    mut events: EventWriter<EnemyDestroyed>,
     mut query: Query<(Entity, &mut Transform, &mut PathFollow)>,
 ) {
     for (entity, mut transform, mut path_follow) in query.iter_mut() {
         path_follow.progress += 0.025 * time.delta_seconds();
         if path_follow.progress >= 1.0 {
-            events.send(EnemyDestroyed { enemy: entity })
+            commands.entity(entity).despawn_recursive();
         }
         transform.translation = path.lerp(path_follow.progress).extend(0.0);
     }
@@ -155,7 +143,7 @@ struct EnemySpawner {
     last_spawn_time: f64,
 }
 
-fn spawn_enemies(
+fn enemy_spawn(
     mut commands: Commands,
     assets: Res<EnemyAssets>,
     time: Res<Time>,

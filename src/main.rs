@@ -10,11 +10,11 @@ mod tower;
 
 fn main() {
     App::new()
+        .insert_resource(ClearColor(Color::rgb(0.2, 0.2, 0.2)))
+        .add_plugins(DefaultPlugins)
         .add_plugin(EnemyPlugin)
         .add_plugin(ProjectilePlugin)
         .add_plugin(TowerPlugin)
-        .insert_resource(ClearColor(Color::rgb(0.2, 0.2, 0.2)))
-        .add_plugins(DefaultPlugins)
         .add_startup_system(setup)
         .run();
 }
