@@ -2,6 +2,7 @@ use bevy::{prelude::*, sprite::Mesh2dHandle};
 
 use crate::{
     coord::{Coord, CELL_SIZE},
+    currency::Currency,
     mesh::{MeshMaterial, RegPoly},
 };
 
@@ -21,10 +22,12 @@ pub struct Enemy;
 
 fn enemy_destroy(
     mut commands: Commands,
+    mut currency: ResMut<Currency>,
     query: Query<(Entity, &Health), (With<Enemy>, Changed<Health>)>,
 ) {
     for (entity, health) in query.iter() {
         if health.current <= 0 {
+            currency.coins += 1;
             commands.entity(entity).despawn_recursive();
         }
     }
@@ -166,7 +169,7 @@ fn enemy_spawn(
                 ..Default::default()
             })
             .insert(Enemy)
-            .insert(Health::new(12))
+            .insert(Health::new(6))
             .insert(PathFollow { progress: 0.0 });
 
         spawner.last_spawn_time = time.seconds_since_startup();

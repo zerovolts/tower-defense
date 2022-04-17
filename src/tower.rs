@@ -8,6 +8,7 @@ use std::f32::consts::{PI, TAU};
 
 use crate::{
     coord::{Coord, CELL_SIZE, HALF_CELL_SIZE},
+    currency::Currency,
     enemy::Enemy,
     mesh::{MeshMaterial, RegPoly},
     projectile::SpawnProjectile,
@@ -275,6 +276,7 @@ fn build_spot_spawn(
 }
 
 fn tower_place(
+    mut currency: ResMut<Currency>,
     mut tower_spawn_events: EventWriter<SpawnTower>,
     mut mouse_events: EventReader<MouseButtonInput>,
     windows: Res<Windows>,
@@ -284,17 +286,18 @@ fn tower_place(
     let window = windows.get_primary().expect("No primary window");
     for mouse_event in mouse_events.iter() {
         if let Some(position) = cursor_coord(&window) {
-            if mouse_event.button == MouseButton::Left && mouse_event.state == ElementState::Pressed
-            {
-                if build_spot_query
+            if mouse_event.button == MouseButton::Left
+                && mouse_event.state == ElementState::Pressed
+                && currency.coins >= 5
+                && build_spot_query
                     .iter()
                     .any(|build_spot_position| build_spot_position.0 == position)
-                    && !tower_query
-                        .iter()
-                        .any(|tower_position| tower_position.0 == position)
-                {
-                    tower_spawn_events.send(SpawnTower { position });
-                }
+                && !tower_query
+                    .iter()
+                    .any(|tower_position| tower_position.0 == position)
+            {
+                currency.coins -= 5;
+                tower_spawn_events.send(SpawnTower { position });
             }
         }
     }
