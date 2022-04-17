@@ -1,9 +1,13 @@
-use bevy::{prelude::*, sprite::Mesh2dHandle};
+use bevy::{
+    input::{mouse::MouseButtonInput, ElementState},
+    prelude::*,
+    sprite::Mesh2dHandle,
+};
 
 use std::f32::consts::{PI, TAU};
 
 use crate::{
-    coord::Coord,
+    coord::{Coord, CELL_SIZE, HALF_CELL_SIZE},
     enemy::Enemy,
     mesh::{MeshMaterial, RegPoly},
     projectile::SpawnProjectile,
@@ -16,8 +20,9 @@ impl Plugin for TowerPlugin {
         app.add_event::<SpawnTower>()
             .add_event::<SpawnBuildSpot>()
             .add_startup_system(tower_setup)
-            .add_system(tower_shoot)
+            .add_system(tower_place)
             .add_system(tower_spawn)
+            .add_system(tower_shoot)
             .add_system(build_spot_spawn);
     }
 }
@@ -42,7 +47,6 @@ fn tower_setup(
     mut commands: Commands,
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut tower_spawn_events: EventWriter<SpawnTower>,
     mut build_spot_spawn_events: EventWriter<SpawnBuildSpot>,
 ) {
     commands.insert_resource(TowerAssets {
@@ -65,31 +69,13 @@ fn tower_setup(
         material: materials.add(Color::rgb(0.3, 0.3, 0.3).into()),
     }));
 
-    tower_spawn_events.send(SpawnTower {
-        position: Coord::new(1, 1),
-    });
-    tower_spawn_events.send(SpawnTower {
-        position: Coord::new(-1, 1),
-    });
-    tower_spawn_events.send(SpawnTower {
-        position: Coord::new(-1, -1),
-    });
-    tower_spawn_events.send(SpawnTower {
-        position: Coord::new(1, -1),
-    });
-
-    build_spot_spawn_events.send(SpawnBuildSpot {
-        position: Coord::new(1, 1),
-    });
-    build_spot_spawn_events.send(SpawnBuildSpot {
-        position: Coord::new(-1, 1),
-    });
-    build_spot_spawn_events.send(SpawnBuildSpot {
-        position: Coord::new(-1, -1),
-    });
-    build_spot_spawn_events.send(SpawnBuildSpot {
-        position: Coord::new(1, -1),
-    });
+    for x in -1..=1 {
+        for y in -1..=1 {
+            build_spot_spawn_events.send(SpawnBuildSpot {
+                position: Coord::new(x, y),
+            });
+        }
+    }
 }
 
 struct SpawnTower {
@@ -259,6 +245,9 @@ impl IntoAngle for Vec2 {
     }
 }
 
+#[derive(Component)]
+struct BuildSpot;
+
 #[derive(Deref)]
 struct BuildSpotAssets(MeshMaterial);
 
@@ -280,6 +269,46 @@ fn build_spot_spawn(
                 transform: Transform::from_translation(v.extend(0.0)),
                 ..Default::default()
             })
+            .insert(BuildSpot)
             .insert(GridPosition(event.position));
+    }
+}
+
+fn tower_place(
+    mut tower_spawn_events: EventWriter<SpawnTower>,
+    mut mouse_events: EventReader<MouseButtonInput>,
+    windows: Res<Windows>,
+    build_spot_query: Query<&GridPosition, With<BuildSpot>>,
+    tower_query: Query<&GridPosition, With<Tower>>,
+) {
+    let window = windows.get_primary().expect("No primary window");
+    for mouse_event in mouse_events.iter() {
+        if let Some(position) = cursor_coord(&window) {
+            if mouse_event.button == MouseButton::Left && mouse_event.state == ElementState::Pressed
+            {
+                if build_spot_query
+                    .iter()
+                    .any(|build_spot_position| build_spot_position.0 == position)
+                    && !tower_query
+                        .iter()
+                        .any(|tower_position| tower_position.0 == position)
+                {
+                    tower_spawn_events.send(SpawnTower { position });
+                }
+            }
+        }
+    }
+}
+
+fn cursor_coord(window: &Window) -> Option<Coord> {
+    if let Some(position) = window.cursor_position() {
+        let half_width = window.width() * 0.5;
+        let half_height = window.height() * 0.5;
+        Some(Coord::new(
+            ((position.x as f32 - half_width + HALF_CELL_SIZE) / CELL_SIZE).floor() as i32,
+            ((position.y as f32 - half_height + HALF_CELL_SIZE) / CELL_SIZE).floor() as i32,
+        ))
+    } else {
+        None
     }
 }

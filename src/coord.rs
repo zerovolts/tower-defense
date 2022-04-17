@@ -1,8 +1,9 @@
 use bevy::math::Vec2;
 
 pub const CELL_SIZE: f32 = 32.0;
+pub const HALF_CELL_SIZE: f32 = CELL_SIZE * 0.5;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Coord {
     pub x: i32,
     pub y: i32,
