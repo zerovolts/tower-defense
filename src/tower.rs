@@ -14,9 +14,11 @@ pub struct TowerPlugin;
 impl Plugin for TowerPlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<SpawnTower>()
+            .add_event::<SpawnBuildSpot>()
             .add_startup_system(tower_setup)
             .add_system(tower_shoot)
-            .add_system(tower_spawn);
+            .add_system(tower_spawn)
+            .add_system(build_spot_spawn);
     }
 }
 
@@ -25,6 +27,9 @@ struct Tower {
     target: Option<Entity>,
     last_projectile_time: f64,
 }
+
+#[derive(Component, Deref)]
+pub struct GridPosition(Coord);
 
 #[derive(Default)]
 struct TowerAssets {
@@ -37,7 +42,8 @@ fn tower_setup(
     mut commands: Commands,
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut events: EventWriter<SpawnTower>,
+    mut tower_spawn_events: EventWriter<SpawnTower>,
+    mut build_spot_spawn_events: EventWriter<SpawnBuildSpot>,
 ) {
     commands.insert_resource(TowerAssets {
         base: MeshMaterial {
@@ -54,16 +60,34 @@ fn tower_setup(
         },
     });
 
-    events.send(SpawnTower {
+    commands.insert_resource(BuildSpotAssets(MeshMaterial {
+        mesh: Mesh2dHandle(meshes.add(shape::Quad::new(Vec2::new(30.0, 30.0)).into())),
+        material: materials.add(Color::rgb(0.3, 0.3, 0.3).into()),
+    }));
+
+    tower_spawn_events.send(SpawnTower {
         position: Coord::new(1, 1),
     });
-    events.send(SpawnTower {
+    tower_spawn_events.send(SpawnTower {
         position: Coord::new(-1, 1),
     });
-    events.send(SpawnTower {
+    tower_spawn_events.send(SpawnTower {
         position: Coord::new(-1, -1),
     });
-    events.send(SpawnTower {
+    tower_spawn_events.send(SpawnTower {
+        position: Coord::new(1, -1),
+    });
+
+    build_spot_spawn_events.send(SpawnBuildSpot {
+        position: Coord::new(1, 1),
+    });
+    build_spot_spawn_events.send(SpawnBuildSpot {
+        position: Coord::new(-1, 1),
+    });
+    build_spot_spawn_events.send(SpawnBuildSpot {
+        position: Coord::new(-1, -1),
+    });
+    build_spot_spawn_events.send(SpawnBuildSpot {
         position: Coord::new(1, -1),
     });
 }
@@ -83,21 +107,22 @@ fn tower_spawn(
             .spawn_bundle(ColorMesh2dBundle {
                 mesh: assets.base.mesh.clone(),
                 material: assets.base.material.clone(),
-                transform: Transform::from_translation(position.extend(0.0)),
+                transform: Transform::from_translation(position.extend(1.0)),
                 ..Default::default()
             })
             .insert(Tower::default())
+            .insert(GridPosition(event.position))
             .with_children(|parent| {
                 parent.spawn_bundle(ColorMesh2dBundle {
                     mesh: assets.barrel.mesh.clone(),
                     material: assets.barrel.material.clone(),
-                    transform: Transform::from_xyz(12.0, 0.0, 1.0),
+                    transform: Transform::from_xyz(12.0, 0.0, 2.0),
                     ..Default::default()
                 });
                 parent.spawn_bundle(ColorMesh2dBundle {
                     mesh: assets.barrel_cap.mesh.clone(),
                     material: assets.barrel_cap.material.clone(),
-                    transform: Transform::from_xyz(0.0, 0.0, 1.0),
+                    transform: Transform::from_xyz(0.0, 0.0, 2.0),
                     ..Default::default()
                 });
             });
@@ -231,5 +256,30 @@ impl IntoAngle for Vec2 {
         } else {
             angle
         }
+    }
+}
+
+#[derive(Deref)]
+struct BuildSpotAssets(MeshMaterial);
+
+struct SpawnBuildSpot {
+    position: Coord,
+}
+
+fn build_spot_spawn(
+    mut commands: Commands,
+    mut events: EventReader<SpawnBuildSpot>,
+    assets: Res<BuildSpotAssets>,
+) {
+    for event in events.iter() {
+        let v: Vec2 = event.position.into();
+        commands
+            .spawn_bundle(ColorMesh2dBundle {
+                mesh: assets.mesh.clone(),
+                material: assets.material.clone(),
+                transform: Transform::from_translation(v.extend(0.0)),
+                ..Default::default()
+            })
+            .insert(GridPosition(event.position));
     }
 }
