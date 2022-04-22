@@ -3,6 +3,7 @@ use bevy::{prelude::*, sprite::Mesh2dHandle};
 use crate::{
     coord::{Coord, CELL_SIZE},
     currency::Currency,
+    health::Health,
     mesh::{MeshMaterial, RegPoly},
 };
 
@@ -55,17 +56,6 @@ fn enemy_setup(
         mesh: Mesh2dHandle(meshes.add(RegPoly::new(6, 14.0).into())),
         material: materials.add(Color::rgb(0.4, 0.2, 0.6).into()),
     }));
-}
-
-#[derive(Component)]
-pub struct Health {
-    pub current: i32,
-}
-
-impl Health {
-    fn new(max: i32) -> Self {
-        Self { current: max }
-    }
 }
 
 #[derive(Default)]

@@ -1,7 +1,8 @@
 use bevy::{prelude::*, sprite::Mesh2dHandle};
 
 use crate::{
-    enemy::{Enemy, Health},
+    enemy::Enemy,
+    health::Health,
     mesh::{MeshMaterial, RegPoly},
 };
 
@@ -75,9 +76,7 @@ fn projectile_hit(
                 .distance(enemy_transform.translation)
                 < 20.0
             {
-                if enemy_health.current > 0 {
-                    enemy_health.current -= 1;
-                }
+                enemy_health.damage(1);
                 commands.entity(projectile_entity).despawn();
                 // Projectiles should only affect a single enemy.
                 break;

@@ -8,6 +8,7 @@ use crate::{
 mod coord;
 mod currency;
 mod enemy;
+mod health;
 mod map;
 mod mesh;
 mod projectile;
