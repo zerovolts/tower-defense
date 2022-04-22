@@ -48,7 +48,6 @@ fn tower_setup(
     mut commands: Commands,
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut build_spot_spawn_events: EventWriter<SpawnBuildSpot>,
 ) {
     commands.insert_resource(TowerAssets {
         base: MeshMaterial {
@@ -69,14 +68,6 @@ fn tower_setup(
         mesh: Mesh2dHandle(meshes.add(shape::Quad::new(Vec2::new(30.0, 30.0)).into())),
         material: materials.add(Color::rgb(0.3, 0.3, 0.3).into()),
     }));
-
-    for x in -1..=1 {
-        for y in -1..=1 {
-            build_spot_spawn_events.send(SpawnBuildSpot {
-                position: Coord::new(x, y),
-            });
-        }
-    }
 }
 
 struct SpawnTower {
@@ -252,8 +243,8 @@ struct BuildSpot;
 #[derive(Deref)]
 struct BuildSpotAssets(MeshMaterial);
 
-struct SpawnBuildSpot {
-    position: Coord,
+pub struct SpawnBuildSpot {
+    pub position: Coord,
 }
 
 fn build_spot_spawn(

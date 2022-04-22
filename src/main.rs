@@ -1,12 +1,14 @@
 use bevy::prelude::*;
 
 use crate::{
-    currency::CurrencyPlugin, enemy::EnemyPlugin, projectile::ProjectilePlugin, tower::TowerPlugin,
+    currency::CurrencyPlugin, enemy::EnemyPlugin, map::MapPlugin, projectile::ProjectilePlugin,
+    tower::TowerPlugin,
 };
 
 mod coord;
 mod currency;
 mod enemy;
+mod map;
 mod mesh;
 mod projectile;
 mod tower;
@@ -18,6 +20,7 @@ fn main() {
         .add_plugin(EnemyPlugin)
         .add_plugin(ProjectilePlugin)
         .add_plugin(TowerPlugin)
+        .add_plugin(MapPlugin)
         .add_plugin(CurrencyPlugin)
         .add_startup_system(setup)
         .run();

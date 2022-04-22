@@ -10,7 +10,7 @@ pub struct Coord {
 }
 
 impl Coord {
-    pub fn new(x: i32, y: i32) -> Self {
+    pub const fn new(x: i32, y: i32) -> Self {
         Coord { x, y }
     }
 }

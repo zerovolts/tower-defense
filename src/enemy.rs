@@ -10,8 +10,10 @@ pub struct EnemyPlugin;
 
 impl Plugin for EnemyPlugin {
     fn build(&self, app: &mut App) {
-        app.add_startup_system(enemy_setup)
+        app.add_event::<SpawnEnemySpawner>()
+            .add_startup_system(enemy_setup)
             .add_system(enemy_spawn)
+            .add_system(enemy_spawner_spawn)
             .add_system(enemy_path_follow)
             .add_system_to_stage(CoreStage::PostUpdate, enemy_destroy);
     }
@@ -36,34 +38,23 @@ fn enemy_destroy(
 #[derive(Deref)]
 struct EnemyAssets(MeshMaterial);
 
+#[derive(Deref)]
+struct EnemySpawnerAssets(MeshMaterial);
+
 fn enemy_setup(
     mut commands: Commands,
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
-    commands.insert_resource(Path::new(vec![
-        Coord::new(-3, -3),
-        Coord::new(-3, 3),
-        Coord::new(3, 3),
-        Coord::new(3, -3),
-        Coord::new(-3, -3),
-    ]));
-
     commands.insert_resource(EnemyAssets(MeshMaterial {
         mesh: Mesh2dHandle(meshes.add(RegPoly::new(4, 12.0).into())),
         material: materials.add(Color::rgb(1.0, 0.3, 0.0).into()),
     }));
 
-    commands
-        .spawn_bundle(ColorMesh2dBundle {
-            mesh: Mesh2dHandle(meshes.add(RegPoly::new(6, 14.0).into())),
-            material: materials.add(Color::rgb(0.4, 0.2, 0.6).into()),
-            transform: Transform::from_xyz(-96.0, -96.0, 1.0),
-            ..Default::default()
-        })
-        .insert(EnemySpawner {
-            last_spawn_time: 0.0,
-        });
+    commands.insert_resource(EnemySpawnerAssets(MeshMaterial {
+        mesh: Mesh2dHandle(meshes.add(RegPoly::new(6, 14.0).into())),
+        material: materials.add(Color::rgb(0.4, 0.2, 0.6).into()),
+    }));
 }
 
 #[derive(Component)]
@@ -78,13 +69,13 @@ impl Health {
 }
 
 #[derive(Default)]
-struct Path {
+pub struct Path {
     nodes: Vec<Coord>,
     segment_lengths: Vec<i32>,
 }
 
 impl Path {
-    fn new(nodes: Vec<Coord>) -> Path {
+    pub fn new(nodes: Vec<Coord>) -> Path {
         let segment_lengths = nodes
             .windows(2)
             .map(|segment| {
@@ -144,6 +135,30 @@ fn enemy_path_follow(
 #[derive(Component)]
 struct EnemySpawner {
     last_spawn_time: f64,
+}
+
+pub struct SpawnEnemySpawner {
+    pub position: Coord,
+}
+
+fn enemy_spawner_spawn(
+    mut commands: Commands,
+    assets: Res<EnemySpawnerAssets>,
+    mut events: EventReader<SpawnEnemySpawner>,
+) {
+    for event in events.iter() {
+        let position: Vec2 = event.position.into();
+        commands
+            .spawn_bundle(ColorMesh2dBundle {
+                mesh: assets.mesh.clone(),
+                material: assets.material.clone(),
+                transform: Transform::from_translation(position.extend(1.0)),
+                ..Default::default()
+            })
+            .insert(EnemySpawner {
+                last_spawn_time: 0.0,
+            });
+    }
 }
 
 fn enemy_spawn(
