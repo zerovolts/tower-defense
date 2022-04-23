@@ -1,6 +1,7 @@
 use bevy::{prelude::*, sprite::Mesh2dHandle};
 
 use crate::{
+    base::Base,
     coord::{Coord, CELL_SIZE},
     currency::Currency,
     health::Health,
@@ -111,11 +112,14 @@ fn enemy_path_follow(
     mut commands: Commands,
     time: Res<Time>,
     path: Res<Path>,
-    mut query: Query<(Entity, &mut Transform, &mut PathFollow)>,
+    mut enemy_query: Query<(Entity, &mut Transform, &mut PathFollow)>,
+    mut base_query: Query<&mut Health, With<Base>>,
 ) {
-    for (entity, mut transform, mut path_follow) in query.iter_mut() {
+    for (entity, mut transform, mut path_follow) in enemy_query.iter_mut() {
         path_follow.progress += 0.025 * time.delta_seconds();
         if path_follow.progress >= 1.0 {
+            let mut base_health = base_query.single_mut();
+            base_health.damage(1);
             commands.entity(entity).despawn_recursive();
         }
         transform.translation = path.lerp(path_follow.progress).extend(0.0);

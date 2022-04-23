@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{
+    base::SpawnBase,
     coord::Coord,
     enemy::{Path, SpawnEnemySpawner},
     tower::SpawnBuildSpot,
@@ -53,9 +54,17 @@ pub fn map_setup(
     mut commands: Commands,
     mut build_spot_spawn_events: EventWriter<SpawnBuildSpot>,
     mut enemy_spawner_spawn_events: EventWriter<SpawnEnemySpawner>,
+    mut base_spawn_events: EventWriter<SpawnBase>,
 ) {
     enemy_spawner_spawn_events.send(SpawnEnemySpawner {
         position: MAP.path[0],
+    });
+
+    base_spawn_events.send(SpawnBase {
+        position: *MAP
+            .path
+            .last()
+            .expect("Path must have at least one segment"),
     });
 
     commands.insert_resource(Path::new(Vec::from(MAP.path)));
