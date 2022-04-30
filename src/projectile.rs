@@ -1,7 +1,9 @@
 use bevy::{prelude::*, sprite::Mesh2dHandle};
+use iyes_loopless::prelude::*;
 
 use crate::{
     enemy::Enemy,
+    game_state::GameState,
     health::Health,
     mesh::{MeshMaterial, RegPoly},
 };
@@ -12,10 +14,15 @@ impl Plugin for ProjectilePlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<SpawnProjectile>()
             .add_startup_system(projectile_setup)
-            .add_system(apply_velocity)
-            .add_system(projectile_spawn)
-            .add_system(projectile_hit)
-            .add_system(projectile_destroy);
+            .add_system_set(
+                ConditionSet::new()
+                    .run_in_state(GameState::Playing)
+                    .with_system(apply_velocity)
+                    .with_system(projectile_spawn)
+                    .with_system(projectile_hit)
+                    .with_system(projectile_destroy)
+                    .into(),
+            );
     }
 }
 

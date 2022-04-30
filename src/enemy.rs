@@ -1,9 +1,11 @@
 use bevy::{prelude::*, sprite::Mesh2dHandle};
+use iyes_loopless::prelude::*;
 
 use crate::{
     base::Base,
     coord::{Coord, CELL_SIZE},
     currency::Currency,
+    game_state::GameState,
     health::Health,
     mesh::{MeshMaterial, RegPoly},
 };
@@ -14,10 +16,18 @@ impl Plugin for EnemyPlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<SpawnEnemySpawner>()
             .add_startup_system(enemy_setup)
-            .add_system(enemy_spawn)
-            .add_system(enemy_spawner_spawn)
-            .add_system(enemy_path_follow)
-            .add_system_to_stage(CoreStage::PostUpdate, enemy_destroy);
+            .add_system_set(
+                ConditionSet::new()
+                    .run_in_state(GameState::Playing)
+                    .with_system(enemy_spawn)
+                    .with_system(enemy_spawner_spawn)
+                    .with_system(enemy_path_follow)
+                    .into(),
+            )
+            .add_system_to_stage(
+                CoreStage::PostUpdate,
+                enemy_destroy.run_in_state(GameState::Playing),
+            );
     }
 }
 

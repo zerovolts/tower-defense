@@ -1,7 +1,9 @@
 use bevy::{prelude::*, sprite::Mesh2dHandle};
+use iyes_loopless::prelude::*;
 
 use crate::{
     coord::Coord,
+    game_state::GameState,
     health::Health,
     mesh::{MeshMaterial, RegPoly},
 };
@@ -12,8 +14,13 @@ impl Plugin for BasePlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<SpawnBase>()
             .add_startup_system(base_setup)
-            .add_system(base_spawn)
-            .add_system(base_destroy);
+            .add_system_set(
+                ConditionSet::new()
+                    .run_in_state(GameState::Playing)
+                    .with_system(base_spawn)
+                    .with_system(base_destroy)
+                    .into(),
+            );
     }
 }
 
@@ -53,13 +60,10 @@ fn base_spawn(mut commands: Commands, assets: Res<BaseAssets>, mut events: Event
     }
 }
 
-fn base_destroy(
-    mut commands: Commands,
-    query: Query<(Entity, &Health), (With<Base>, Changed<Health>)>,
-) {
-    for (entity, health) in query.iter() {
+fn base_destroy(mut commands: Commands, query: Query<&Health, (With<Base>, Changed<Health>)>) {
+    for health in query.iter() {
         if health.current <= 0 {
-            commands.entity(entity).despawn();
+            commands.insert_resource(NextState(GameState::GameOver));
         }
     }
 }

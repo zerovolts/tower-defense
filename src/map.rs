@@ -1,9 +1,11 @@
 use bevy::prelude::*;
+use iyes_loopless::prelude::*;
 
 use crate::{
     base::SpawnBase,
     coord::Coord,
     enemy::{Path, SpawnEnemySpawner},
+    game_state::GameState,
     tower::SpawnBuildSpot,
 };
 
@@ -11,7 +13,7 @@ pub struct MapPlugin;
 
 impl Plugin for MapPlugin {
     fn build(&self, app: &mut App) {
-        app.add_startup_system(map_setup);
+        app.add_enter_system(GameState::Playing, map_setup);
     }
 }
 

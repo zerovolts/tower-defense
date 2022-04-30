@@ -1,14 +1,16 @@
 use bevy::prelude::*;
+use iyes_loopless::prelude::*;
 
 use crate::{
-    base::BasePlugin, currency::CurrencyPlugin, enemy::EnemyPlugin, map::MapPlugin,
-    projectile::ProjectilePlugin, tower::TowerPlugin,
+    base::BasePlugin, currency::CurrencyPlugin, enemy::EnemyPlugin, game_state::GameState,
+    map::MapPlugin, projectile::ProjectilePlugin, tower::TowerPlugin,
 };
 
 mod base;
 mod coord;
 mod currency;
 mod enemy;
+mod game_state;
 mod health;
 mod map;
 mod mesh;
@@ -18,6 +20,7 @@ mod tower;
 fn main() {
     App::new()
         .insert_resource(ClearColor(Color::rgb(0.2, 0.2, 0.2)))
+        .add_loopless_state(GameState::Playing)
         .add_plugins(DefaultPlugins)
         .add_plugin(EnemyPlugin)
         .add_plugin(ProjectilePlugin)

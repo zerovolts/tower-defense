@@ -3,6 +3,7 @@ use bevy::{
     prelude::*,
     sprite::Mesh2dHandle,
 };
+use iyes_loopless::prelude::*;
 
 use std::f32::consts::{PI, TAU};
 
@@ -10,6 +11,7 @@ use crate::{
     coord::{Coord, CELL_SIZE, HALF_CELL_SIZE},
     currency::Currency,
     enemy::Enemy,
+    game_state::GameState,
     mesh::{MeshMaterial, RegPoly},
     projectile::SpawnProjectile,
 };
@@ -21,10 +23,15 @@ impl Plugin for TowerPlugin {
         app.add_event::<SpawnTower>()
             .add_event::<SpawnBuildSpot>()
             .add_startup_system(tower_setup)
-            .add_system(tower_place)
-            .add_system(tower_spawn)
-            .add_system(tower_shoot)
-            .add_system(build_spot_spawn);
+            .add_system_set(
+                ConditionSet::new()
+                    .run_in_state(GameState::Playing)
+                    .with_system(tower_place)
+                    .with_system(tower_spawn)
+                    .with_system(tower_shoot)
+                    .with_system(build_spot_spawn)
+                    .into(),
+            );
     }
 }
 

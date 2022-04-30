@@ -1,12 +1,15 @@
 use bevy::prelude::*;
+use iyes_loopless::prelude::*;
+
+use crate::game_state::GameState;
 
 pub struct CurrencyPlugin;
 
 impl Plugin for CurrencyPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(Currency { coins: 10 })
-            .add_startup_system(currency_setup)
-            .add_system(currency_update);
+            .add_enter_system(GameState::Playing, currency_setup)
+            .add_system(currency_update.run_in_state(GameState::Playing));
     }
 }
 
