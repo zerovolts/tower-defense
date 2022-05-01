@@ -11,7 +11,7 @@ pub struct GamePlugin;
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(ClearColor(Color::rgb(0.2, 0.2, 0.2)))
-            .add_loopless_state(GameState::Playing)
+            .add_loopless_state(GameState::LoadingMap)
             .add_plugin(EnemyPlugin)
             .add_plugin(ProjectilePlugin)
             .add_plugin(TowerPlugin)

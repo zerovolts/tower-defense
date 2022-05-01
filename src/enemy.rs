@@ -22,6 +22,8 @@ impl Plugin for EnemyPlugin {
                     .with_system(enemy_spawn)
                     .with_system(enemy_spawner_spawn)
                     .with_system(enemy_path_follow)
+                    // TODO: This should probably have a deterministic ordering
+                    .with_system(play_time_update.run_in_state(GameState::Playing))
                     .into(),
             )
             .add_system_to_stage(
@@ -165,14 +167,22 @@ fn enemy_spawner_spawn(
     }
 }
 
+pub struct PlayTime {
+    pub seconds: f64,
+}
+
+fn play_time_update(mut play_time: ResMut<PlayTime>, time: Res<Time>) {
+    play_time.seconds += time.delta_seconds_f64();
+}
+
 fn enemy_spawn(
     mut commands: Commands,
     assets: Res<EnemyAssets>,
-    time: Res<Time>,
+    play_time: Res<PlayTime>,
     mut query: Query<(&mut EnemySpawner, &Transform)>,
 ) {
     for (mut spawner, transform) in query.iter_mut() {
-        if time.seconds_since_startup() - spawner.last_spawn_time < 2.0 {
+        if play_time.seconds - spawner.last_spawn_time < 2.0 {
             continue;
         }
 
@@ -191,6 +201,6 @@ fn enemy_spawn(
             .insert(Health::new(6))
             .insert(PathFollow { progress: 0.0 });
 
-        spawner.last_spawn_time = time.seconds_since_startup();
+        spawner.last_spawn_time = play_time.seconds;
     }
 }

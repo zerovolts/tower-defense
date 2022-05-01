@@ -4,7 +4,7 @@ use iyes_loopless::prelude::*;
 use crate::{
     base::SpawnBase,
     coord::Coord,
-    enemy::{Path, SpawnEnemySpawner},
+    enemy::{Path, PlayTime, SpawnEnemySpawner},
     game_state::GameState,
     tower::SpawnBuildSpot,
 };
@@ -13,7 +13,7 @@ pub struct MapPlugin;
 
 impl Plugin for MapPlugin {
     fn build(&self, app: &mut App) {
-        app.add_enter_system(GameState::Playing, map_setup);
+        app.add_enter_system(GameState::LoadingMap, map_setup);
     }
 }
 
@@ -74,4 +74,7 @@ pub fn map_setup(
     for &position in MAP.build_spots {
         build_spot_spawn_events.send(SpawnBuildSpot { position });
     }
+
+    commands.insert_resource(NextState(GameState::Playing));
+    commands.insert_resource(PlayTime { seconds: 0.0 });
 }
