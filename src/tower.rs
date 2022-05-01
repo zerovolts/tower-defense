@@ -22,6 +22,7 @@ impl Plugin for TowerPlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<SpawnTower>()
             .add_event::<SpawnBuildSpot>()
+            .init_resource::<Option<Selection>>()
             .add_startup_system(tower_setup)
             .add_system_set(
                 ConditionSet::new()
@@ -30,6 +31,7 @@ impl Plugin for TowerPlugin {
                     .with_system(tower_spawn)
                     .with_system(tower_shoot)
                     .with_system(build_spot_spawn)
+                    .with_system(selected_tower_radius)
                     .into(),
             );
     }
@@ -50,6 +52,9 @@ struct TowerAssets {
     barrel: MeshMaterial,
     barrel_cap: MeshMaterial,
 }
+
+#[derive(Deref)]
+struct SelectionAssets(MeshMaterial);
 
 fn tower_setup(
     mut commands: Commands,
@@ -74,6 +79,11 @@ fn tower_setup(
     commands.insert_resource(BuildSpotAssets(MeshMaterial {
         mesh: Mesh2dHandle(meshes.add(shape::Quad::new(Vec2::new(30.0, 30.0)).into())),
         material: materials.add(Color::rgb(0.3, 0.3, 0.3).into()),
+    }));
+
+    commands.insert_resource(SelectionAssets(MeshMaterial {
+        mesh: Mesh2dHandle(meshes.add(RegPoly::new(40, MAX_DISTANCE).into())),
+        material: materials.add(Color::rgba(0.0, 0.5, 1.0, 0.1).into()),
     }));
 }
 
@@ -117,7 +127,7 @@ fn tower_spawn(
 const CLOCKWISE: f32 = -1.0;
 const COUNTER_CLOCKWISE: f32 = 1.0;
 const ANGULAR_SPEED: f32 = TAU / 200.0;
-const MAX_DISTANCE: f32 = 256.0;
+const MAX_DISTANCE: f32 = 64.0;
 
 fn tower_shoot(
     time: Res<Time>,
@@ -273,29 +283,76 @@ fn build_spot_spawn(
     }
 }
 
+struct Selection(Entity);
+
 fn tower_place(
     mut currency: ResMut<Currency>,
     mut tower_spawn_events: EventWriter<SpawnTower>,
     mut mouse_events: EventReader<MouseButtonInput>,
+    mut selection: ResMut<Option<Selection>>,
     windows: Res<Windows>,
     build_spot_query: Query<&GridPosition, With<BuildSpot>>,
-    tower_query: Query<&GridPosition, With<Tower>>,
+    tower_query: Query<(Entity, &GridPosition), With<Tower>>,
 ) {
     let window = windows.get_primary().expect("No primary window");
     for mouse_event in mouse_events.iter() {
         if let Some(position) = cursor_coord(&window) {
-            if mouse_event.button == MouseButton::Left
-                && mouse_event.state == ElementState::Pressed
-                && currency.coins >= 5
-                && build_spot_query
-                    .iter()
-                    .any(|build_spot_position| build_spot_position.0 == position)
-                && !tower_query
-                    .iter()
-                    .any(|tower_position| tower_position.0 == position)
+            if mouse_event.button == MouseButton::Left && mouse_event.state == ElementState::Pressed
             {
-                currency.coins -= 5;
-                tower_spawn_events.send(SpawnTower { position });
+                // Attempt to build a tower
+                if currency.coins >= 5
+                    && build_spot_query
+                        .iter()
+                        .any(|build_spot_position| build_spot_position.0 == position)
+                    && !tower_query
+                        .iter()
+                        .any(|(_tower, tower_position)| tower_position.0 == position)
+                {
+                    currency.coins -= 5;
+                    tower_spawn_events.send(SpawnTower { position });
+                }
+
+                let clicked_tower = tower_query
+                    .iter()
+                    .find(|(_tower, tower_position)| tower_position.0 == position);
+
+                if let Some((tower, _tower_position)) = clicked_tower {
+                    *selection = Some(Selection(tower));
+                } else {
+                    *selection = None;
+                }
+            }
+        }
+    }
+}
+
+#[derive(Component)]
+struct SelectionRadius;
+
+fn selected_tower_radius(
+    mut commands: Commands,
+    assets: Res<SelectionAssets>,
+    selection: Res<Option<Selection>>,
+    tower_query: Query<(Entity, &Transform), With<Tower>>,
+    selection_radius_query: Query<Entity, With<SelectionRadius>>,
+) {
+    if selection.is_changed() {
+        for selection_radius in selection_radius_query.iter() {
+            commands.entity(selection_radius).despawn();
+        }
+
+        if let Some(selection) = &*selection {
+            if let Some((_, tower_transform)) =
+                tower_query.iter().find(|&(tower, _)| tower == selection.0)
+            {
+                commands
+                    .spawn_bundle(ColorMesh2dBundle {
+                        mesh: assets.mesh.clone(),
+                        material: assets.material.clone(),
+                        transform: tower_transform.clone(),
+                        ..Default::default()
+                    })
+                    .insert(SelectionRadius);
             }
         }
     }
