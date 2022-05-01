@@ -46,7 +46,6 @@ struct Tower {
 #[derive(Component, Deref)]
 pub struct GridPosition(Coord);
 
-#[derive(Default)]
 struct TowerAssets {
     base: MeshMaterial,
     barrel: MeshMaterial,

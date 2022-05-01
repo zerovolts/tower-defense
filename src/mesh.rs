@@ -6,7 +6,6 @@ use bevy::{
 
 use std::f32::consts::TAU;
 
-#[derive(Default)]
 pub struct MeshMaterial {
     pub mesh: Mesh2dHandle,
     pub material: Handle<ColorMaterial>,

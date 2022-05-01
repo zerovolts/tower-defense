@@ -71,7 +71,6 @@ fn enemy_setup(
     }));
 }
 
-#[derive(Default)]
 pub struct Path {
     nodes: Vec<Coord>,
     segment_lengths: Vec<i32>,
