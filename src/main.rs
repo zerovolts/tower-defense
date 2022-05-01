@@ -14,6 +14,7 @@ mod map;
 mod mesh;
 mod projectile;
 mod tower;
+mod ui;
 
 fn main() {
     App::new()
