@@ -3,9 +3,29 @@ name = "tower-defense"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
-bevy = "0.7.0"
 bevy_egui = "0.13.0"
 iyes_loopless = "0.5.1"
+
+[dependencies.bevy]
+version = "0.7"
+default-features = false
+# Default features excluding "bevy_audio" and "vorbis"
+features = [
+    "animation",
+    "bevy_gilrs",
+    "bevy_winit",
+    "x11",
+    "filesystem_watcher",
+    "render",
+    "png",
+    "hdr",
+]
+
+[dependencies.bevy_kira_audio]
+version = "0.9.0"
+default-features = false
+features = [
+    "flac",
+    "ogg",
+]
