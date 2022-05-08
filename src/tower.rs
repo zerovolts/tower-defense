@@ -3,11 +3,13 @@ use bevy::{
     prelude::*,
     sprite::Mesh2dHandle,
 };
+use bevy_kira_audio::Audio;
 use iyes_loopless::prelude::*;
 
 use std::f32::consts::{PI, TAU};
 
 use crate::{
+    audio::AudioHandleMap,
     coord::{Coord, CELL_SIZE, HALF_CELL_SIZE},
     currency::Currency,
     enemy::Enemy,
@@ -57,6 +59,7 @@ struct SelectionAssets(MeshMaterial);
 
 fn tower_setup(
     mut commands: Commands,
+    // asset_server: Res<AssetServer>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
@@ -130,6 +133,8 @@ const MAX_DISTANCE: f32 = 64.0;
 
 fn tower_shoot(
     time: Res<Time>,
+    audio: Res<Audio>,
+    sounds: Res<AudioHandleMap>,
     mut events: EventWriter<SpawnProjectile>,
     mut tower_query: Query<(&mut Tower, &mut Transform), Without<Enemy>>,
     enemy_query: Query<(Entity, &Transform), With<Enemy>>,
@@ -222,6 +227,7 @@ fn tower_shoot(
                 position: tower_transform.translation.truncate(),
                 direction: target_direction,
             });
+            audio.play(sounds.tower_shoot.clone());
 
             tower.last_projectile_time = time.seconds_since_startup();
         }
@@ -292,6 +298,8 @@ fn tower_place(
     windows: Res<Windows>,
     build_spot_query: Query<&GridPosition, With<BuildSpot>>,
     tower_query: Query<(Entity, &GridPosition), With<Tower>>,
+    audio: Res<Audio>,
+    sounds: Res<AudioHandleMap>,
 ) {
     let window = windows.get_primary().expect("No primary window");
     for mouse_event in mouse_events.iter() {
@@ -309,6 +317,7 @@ fn tower_place(
                 {
                     currency.coins -= 5;
                     tower_spawn_events.send(SpawnTower { position });
+                    audio.play(sounds.tower_place.clone());
                 }
 
                 let clicked_tower = tower_query

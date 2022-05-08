@@ -1,7 +1,9 @@
 use bevy::{prelude::*, sprite::Mesh2dHandle};
+use bevy_kira_audio::Audio;
 use iyes_loopless::prelude::*;
 
 use crate::{
+    audio::AudioHandleMap,
     enemy::Enemy,
     game_state::GameState,
     health::Health,
@@ -73,6 +75,8 @@ fn projectile_spawn(
 
 fn projectile_hit(
     mut commands: Commands,
+    sounds: Res<AudioHandleMap>,
+    audio: Res<Audio>,
     projectile_query: Query<(Entity, &Transform), With<Projectile>>,
     mut enemy_query: Query<(&mut Health, &Transform), With<Enemy>>,
 ) {
@@ -85,6 +89,7 @@ fn projectile_hit(
             {
                 enemy_health.damage(1);
                 commands.entity(projectile_entity).despawn();
+                audio.play(sounds.enemy_hit.clone());
                 // Projectiles should only affect a single enemy.
                 break;
             }

@@ -1,7 +1,9 @@
 use bevy::{prelude::*, sprite::Mesh2dHandle};
+use bevy_kira_audio::Audio;
 use iyes_loopless::prelude::*;
 
 use crate::{
+    audio::AudioHandleMap,
     coord::Coord,
     game_state::GameState,
     health::Health,
@@ -60,10 +62,16 @@ fn base_spawn(mut commands: Commands, assets: Res<BaseAssets>, mut events: Event
     }
 }
 
-fn base_destroy(mut commands: Commands, query: Query<&Health, (With<Base>, Changed<Health>)>) {
+fn base_destroy(
+    mut commands: Commands,
+    sounds: Res<AudioHandleMap>,
+    audio: Res<Audio>,
+    query: Query<&Health, (With<Base>, Changed<Health>)>,
+) {
     for health in query.iter() {
         if health.current <= 0 {
             commands.insert_resource(NextState(GameState::GameOver));
+            audio.play(sounds.base_destroy.clone());
         }
     }
 }

@@ -1,7 +1,9 @@
 use bevy::{prelude::*, sprite::Mesh2dHandle};
+use bevy_kira_audio::Audio;
 use iyes_loopless::prelude::*;
 
 use crate::{
+    audio::AudioHandleMap,
     base::Base,
     coord::{Coord, CELL_SIZE},
     currency::Currency,
@@ -39,11 +41,14 @@ pub struct Enemy;
 fn enemy_destroy(
     mut commands: Commands,
     mut currency: ResMut<Currency>,
+    sounds: Res<AudioHandleMap>,
+    audio: Res<Audio>,
     query: Query<(Entity, &Health), (With<Enemy>, Changed<Health>)>,
 ) {
     for (entity, health) in query.iter() {
         if health.current <= 0 {
             currency.coins += 1;
+            audio.play(sounds.enemy_destroy.clone());
             commands.entity(entity).despawn_recursive();
         }
     }
@@ -123,6 +128,8 @@ fn enemy_path_follow(
     mut commands: Commands,
     time: Res<Time>,
     path: Res<Path>,
+    audio: Res<Audio>,
+    sounds: Res<AudioHandleMap>,
     mut enemy_query: Query<(Entity, &mut Transform, &mut PathFollow)>,
     mut base_query: Query<&mut Health, With<Base>>,
 ) {
@@ -132,6 +139,7 @@ fn enemy_path_follow(
             let mut base_health = base_query.single_mut();
             base_health.damage(1);
             commands.entity(entity).despawn_recursive();
+            audio.play(sounds.base_hit.clone());
         }
         transform.translation = path.lerp(path_follow.progress).extend(0.0);
     }

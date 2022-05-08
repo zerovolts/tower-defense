@@ -2,8 +2,9 @@ use bevy::prelude::*;
 use iyes_loopless::prelude::*;
 
 use crate::{
-    base::BasePlugin, currency::CurrencyPlugin, enemy::EnemyPlugin, game_state::GameState,
-    map::MapPlugin, projectile::ProjectilePlugin, tower::TowerPlugin, ui::UiPlugin,
+    audio::AudioPlugin, base::BasePlugin, currency::CurrencyPlugin, enemy::EnemyPlugin,
+    game_state::GameState, map::MapPlugin, projectile::ProjectilePlugin, tower::TowerPlugin,
+    ui::UiPlugin,
 };
 
 pub struct GamePlugin;
@@ -19,6 +20,7 @@ impl Plugin for GamePlugin {
             .add_plugin(BasePlugin)
             .add_plugin(CurrencyPlugin)
             .add_plugin(UiPlugin)
+            .add_plugin(AudioPlugin)
             .add_startup_system(game_setup);
     }
 }

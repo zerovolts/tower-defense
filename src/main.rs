@@ -1,8 +1,10 @@
 use bevy::prelude::*;
 use bevy_egui::EguiPlugin;
+use bevy_kira_audio::AudioPlugin;
 
 use crate::game::GamePlugin;
 
+mod audio;
 mod base;
 mod coord;
 mod currency;
@@ -20,6 +22,7 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugin(EguiPlugin)
+        .add_plugin(AudioPlugin)
         .add_plugin(GamePlugin)
         .run();
 }
