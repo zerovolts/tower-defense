@@ -1,13 +1,17 @@
 use bevy::prelude::*;
-use bevy_kira_audio::AudioSource;
+use bevy_kira_audio::{Audio, AudioSource};
 
 pub struct AudioPlugin;
 
 impl Plugin for AudioPlugin {
     fn build(&self, app: &mut App) {
-        app.add_startup_system(audio_setup);
+        app.insert_resource(GlobalVolume(0))
+            .add_startup_system(audio_setup)
+            .add_system(volume_change);
     }
 }
+
+pub struct GlobalVolume(pub i32);
 
 type AudioHandle = Handle<AudioSource>;
 
@@ -29,4 +33,10 @@ fn audio_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         tower_place: asset_server.load("sfx/tower_place.flac"),
         tower_shoot: asset_server.load("sfx/tower_shoot.flac"),
     });
+}
+
+fn volume_change(volume: Res<GlobalVolume>, audio: Res<Audio>) {
+    if volume.is_changed() {
+        audio.set_volume(volume.0 as f32 / 100.0);
+    }
 }

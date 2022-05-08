@@ -3,7 +3,8 @@ use bevy_egui::{egui, EguiContext, EguiSettings};
 use iyes_loopless::prelude::*;
 
 use crate::{
-    base::Base, currency::Currency, enemy::PlayTime, game_state::GameState, health::Health,
+    audio::GlobalVolume, base::Base, currency::Currency, enemy::PlayTime, game_state::GameState,
+    health::Health,
 };
 
 pub struct UiPlugin;
@@ -27,6 +28,7 @@ fn ui_setup(mut egui_ctx: ResMut<EguiContext>, mut egui_settings: ResMut<EguiSet
 fn ui(
     mut commands: Commands,
     mut egui_ctx: ResMut<EguiContext>,
+    mut volume: ResMut<GlobalVolume>,
     currency: Res<Currency>,
     play_time: Res<PlayTime>,
     game_state: Res<CurrentState<GameState>>,
@@ -76,6 +78,19 @@ fn ui(
                         commands.insert_resource(NextState(GameState::Playing));
                     }
                 }
+
+                ui.separator();
+
+                let volume_icon = match volume.0 {
+                    0 => "🔈",
+                    100 => "🔊",
+                    _ => "🔉",
+                };
+                ui.add(
+                    egui::Slider::new(&mut volume.0, 0..=100)
+                        .show_value(false)
+                        .text(volume_icon),
+                );
             });
         });
     });
