@@ -42,7 +42,7 @@ fn projectile_setup(
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
     commands.insert_resource(ProjectileAssets(MeshMaterial {
-        mesh: Mesh2dHandle(meshes.add(RegPoly::new(8, 2.0).into())),
+        mesh: Mesh2dHandle(meshes.add(RegPoly::fill(8, 2.0).into())),
         material: materials.add(Color::rgb(0.1, 0.1, 0.1).into()),
     }));
 }

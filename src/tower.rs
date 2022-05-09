@@ -54,8 +54,10 @@ struct TowerAssets {
     barrel_cap: MeshMaterial,
 }
 
-#[derive(Deref)]
-struct SelectionAssets(MeshMaterial);
+struct SelectionAssets {
+    fill: MeshMaterial,
+    outline: MeshMaterial,
+}
 
 fn tower_setup(
     mut commands: Commands,
@@ -65,7 +67,7 @@ fn tower_setup(
 ) {
     commands.insert_resource(TowerAssets {
         base: MeshMaterial {
-            mesh: Mesh2dHandle(meshes.add(RegPoly::new(6, 12.0).into())),
+            mesh: Mesh2dHandle(meshes.add(RegPoly::fill(6, 12.0).into())),
             material: materials.add(Color::rgb(0.0, 0.5, 1.0).into()),
         },
         barrel: MeshMaterial {
@@ -83,10 +85,16 @@ fn tower_setup(
         material: materials.add(Color::rgb(0.3, 0.3, 0.3).into()),
     }));
 
-    commands.insert_resource(SelectionAssets(MeshMaterial {
-        mesh: Mesh2dHandle(meshes.add(RegPoly::new(40, MAX_DISTANCE).into())),
-        material: materials.add(Color::rgba(0.0, 0.5, 1.0, 0.1).into()),
-    }));
+    commands.insert_resource(SelectionAssets {
+        fill: MeshMaterial {
+            mesh: Mesh2dHandle(meshes.add(RegPoly::fill(40, MAX_DISTANCE).into())),
+            material: materials.add(Color::rgba(0.0, 0.5, 1.0, 0.1).into()),
+        },
+        outline: MeshMaterial {
+            mesh: Mesh2dHandle(meshes.add(RegPoly::outline(40, MAX_DISTANCE).into())),
+            material: materials.add(Color::rgb(0.0, 0.5, 1.0).into()),
+        },
+    });
 }
 
 struct SpawnTower {
@@ -346,7 +354,7 @@ fn selected_tower_radius(
 ) {
     if selection.is_changed() {
         for selection_radius in selection_radius_query.iter() {
-            commands.entity(selection_radius).despawn();
+            commands.entity(selection_radius).despawn_recursive();
         }
 
         if let Some(selection) = &*selection {
@@ -355,12 +363,19 @@ fn selected_tower_radius(
             {
                 commands
                     .spawn_bundle(ColorMesh2dBundle {
-                        mesh: assets.mesh.clone(),
-                        material: assets.material.clone(),
+                        mesh: assets.fill.mesh.clone(),
+                        material: assets.fill.material.clone(),
                         transform: tower_transform.clone(),
                         ..Default::default()
                     })
-                    .insert(SelectionRadius);
+                    .insert(SelectionRadius)
+                    .with_children(|parent| {
+                        parent.spawn_bundle(ColorMesh2dBundle {
+                            mesh: assets.outline.mesh.clone(),
+                            material: assets.outline.material.clone(),
+                            ..Default::default()
+                        });
+                    });
             }
         }
     }

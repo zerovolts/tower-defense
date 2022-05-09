@@ -38,7 +38,7 @@ fn base_setup(
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
     commands.insert_resource(BaseAssets(MeshMaterial {
-        mesh: Mesh2dHandle(meshes.add(RegPoly::new(6, 12.0).into())),
+        mesh: Mesh2dHandle(meshes.add(RegPoly::fill(6, 12.0).into())),
         material: materials.add(Color::rgb(6.0, 0.6, 0.2).into()),
     }));
 }

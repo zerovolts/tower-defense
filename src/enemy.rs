@@ -66,12 +66,12 @@ fn enemy_setup(
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
     commands.insert_resource(EnemyAssets(MeshMaterial {
-        mesh: Mesh2dHandle(meshes.add(RegPoly::new(4, 12.0).into())),
+        mesh: Mesh2dHandle(meshes.add(RegPoly::fill(4, 12.0).into())),
         material: materials.add(Color::rgb(1.0, 0.3, 0.0).into()),
     }));
 
     commands.insert_resource(EnemySpawnerAssets(MeshMaterial {
-        mesh: Mesh2dHandle(meshes.add(RegPoly::new(6, 14.0).into())),
+        mesh: Mesh2dHandle(meshes.add(RegPoly::fill(6, 14.0).into())),
         material: materials.add(Color::rgb(0.4, 0.2, 0.6).into()),
     }));
 }
